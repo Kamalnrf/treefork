@@ -1,18 +1,26 @@
 import { access, mkdir, realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
-import { WorkspaceExistsError } from "./errors";
+import {
+  CopseError,
+  CopseGitError,
+  WorkspaceExistsError,
+  WorkspaceNotFoundError,
+} from "./errors";
 import { git } from "./git";
 import { nameFromBranch, sanitizeName, toBranchName, toWorkspacePath } from "./naming";
 import type {
   CreateWorkspaceOptions,
   ResolveWorkspaceOptions,
+  RemoveWorkspaceOptions,
   ResolvedConfig,
   WorkspaceInfo,
 } from "./types";
 
 const HEAD_REF = "HEAD";
 const LOCAL_BRANCH_PREFIX = "refs/heads/";
+const DIRTY_WORKTREE_PATTERN = /contains modified or untracked files/i;
+const MISSING_BRANCH_PATTERN = /branch ['"].+['"] not found/i;
 
 type ParsedWorktree = {
   path: string;
@@ -26,6 +34,12 @@ function absoluteStorageDir(config: ResolvedConfig): string {
 
 function absoluteWorkspacePath(config: ResolvedConfig, name: string): string {
   return resolvePath(config.repoRoot, toWorkspacePath(config.storageDir, name));
+}
+
+function checkpointRefNamespace(config: ResolvedConfig, workspaceName: string): string {
+  const prefix = config.checkpointRefPrefix.replace(/\/+$/, "");
+
+  return `${prefix}/${sanitizeName(workspaceName)}/`;
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -102,6 +116,50 @@ function toWorkspaceInfo(
   };
 }
 
+function isDirtyWorktreeError(error: unknown): error is CopseGitError {
+  return error instanceof CopseGitError && DIRTY_WORKTREE_PATTERN.test(error.stderr);
+}
+
+function isMissingBranchError(error: unknown): error is CopseGitError {
+  return error instanceof CopseGitError && MISSING_BRANCH_PATTERN.test(error.stderr);
+}
+
+async function deleteCheckpointRefs(
+  config: ResolvedConfig,
+  workspaceName: string,
+): Promise<void> {
+  const refNamespace = checkpointRefNamespace(config, workspaceName);
+  const output = await git(config.repoRoot, [
+    "for-each-ref",
+    refNamespace,
+    "--format=%(refname)",
+  ]);
+
+  for (const ref of output.split("\n")) {
+    if (ref === "") {
+      continue;
+    }
+
+    await git(config.repoRoot, ["update-ref", "-d", ref]);
+  }
+}
+
+async function deleteWorkspaceBranch(
+  config: ResolvedConfig,
+  branch: string,
+  force: boolean,
+): Promise<void> {
+  try {
+    await git(config.repoRoot, ["branch", "-D", branch]);
+  } catch (error) {
+    if (force && isMissingBranchError(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 export async function createWorkspace(
   config: ResolvedConfig,
   options: CreateWorkspaceOptions,
@@ -145,4 +203,63 @@ export async function resolveWorkspace(
   }
 
   return null;
+}
+
+export async function listWorkspaces(config: ResolvedConfig): Promise<WorkspaceInfo[]> {
+  const output = await git(config.repoRoot, ["worktree", "list", "--porcelain"]);
+  const workspaces: WorkspaceInfo[] = [];
+
+  for (const entry of parseWorktreeList(output)) {
+    const workspace = toWorkspaceInfo(entry, config.branchPrefix);
+
+    if (workspace !== null) {
+      workspaces.push(workspace);
+    }
+  }
+
+  return workspaces;
+}
+
+export async function removeWorkspace(
+  config: ResolvedConfig,
+  options: RemoveWorkspaceOptions,
+): Promise<void> {
+  const name = sanitizeName(options.name);
+  const force = options.force === true;
+  const branch = toBranchName(name, config.branchPrefix);
+  const workspace = await resolveWorkspace(config, { name });
+
+  if (workspace === null) {
+    if (!force) {
+      throw new WorkspaceNotFoundError(`Workspace "${name}" was not found.`);
+    }
+
+    await deleteCheckpointRefs(config, name);
+    await deleteWorkspaceBranch(config, branch, true);
+    return;
+  }
+
+  const args = ["worktree", "remove"];
+
+  if (force) {
+    args.push("--force");
+  }
+
+  args.push(workspace.path);
+
+  try {
+    await git(config.repoRoot, args);
+  } catch (error) {
+    if (!force && isDirtyWorktreeError(error)) {
+      throw new CopseError(
+        `Workspace "${name}" has uncommitted changes. Re-run with force: true to remove it.`,
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
+
+  await deleteCheckpointRefs(config, name);
+  await deleteWorkspaceBranch(config, branch, force);
 }

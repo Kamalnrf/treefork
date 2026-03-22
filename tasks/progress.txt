@@ -1,0 +1,53 @@
+# Copse v0.1 — Progress
+
+## Current Run
+Branch: ralph/copse-v0.1
+Started: 2026-03-22
+
+## Story Status
+- [x] US-001: Git utility layer and typed errors
+- [x] US-002: Naming and path conventions
+- [x] US-003: Types
+- [x] US-004: Workspace create and resolve
+- [x] US-005: Workspace list and remove
+- [x] US-006: Checkpoint create and list
+- [x] US-007: Checkpoint restore
+- [x] US-008: createCopse factory and public API
+- [x] US-009: CLI — workspace commands
+- [x] US-010: CLI — checkpoint commands
+- [ ] US-011: CLI config file loading
+- [ ] US-012: Integration tests — workspace lifecycle
+- [ ] US-013: Integration tests — checkpoint lifecycle
+
+## Notes
+- tasks/ directory is in .gitignore — do not commit
+- Library uses Node-compatible APIs (node:child_process, node:fs/promises) but dev/test uses Bun
+- Single package, no monorepo
+- Use Bun for this project
+- 2026-03-22: Completed US-001 by adding `src/errors.ts` and `src/git.ts`.
+- Verification: `bunx tsc --noEmit` passed.
+- 2026-03-22: Completed US-002 by adding `src/naming.ts` with name sanitization plus branch, checkpoint-ref, workspace-path, storage-dir, and branch-name parsing helpers.
+- Verification: `bunx tsc --noEmit` passed.
+- 2026-03-22: Completed US-003 by adding `src/types.ts` with shared config, workspace, checkpoint, option, method, and top-level Copse API type definitions.
+- Verification: `bunx tsc --noEmit` passed.
+- 2026-03-22: Completed US-004 by adding `src/workspaces.ts` with `createWorkspace` and `resolveWorkspace`, `git worktree list --porcelain` parsing, storage-dir creation, duplicate-path guarding, invalid-name handling through naming helpers, and canonicalized worktree paths for consistent create/resolve results.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo smoke test passed for create, resolve, duplicate-name rejection, invalid-name rejection, and missing-workspace lookup.
+- 2026-03-22: Completed US-005 by extending `src/workspaces.ts` with `listWorkspaces` and `removeWorkspace`, filtering managed worktrees by branch prefix, deleting worktree paths and their branches, cleaning checkpoint refs under the workspace namespace, surfacing a clearer dirty-worktree error without force, and making forced removal idempotent when the workspace is already gone.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo smoke test passed for managed-workspace listing, normal removal, checkpoint-ref cleanup, dirty-worktree rejection without force, forced removal, and idempotent forced removal.
+- 2026-03-22: Completed US-006 by adding `src/checkpoints.ts` with `createCheckpoint` and `listCheckpoints`, validating workspaces through `resolveWorkspace`, storing checkpoint refs under the configured checkpoint namespace, rejecting duplicate checkpoint names, and parsing checkpoint refs back into `CheckpointInfo` results.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo checkpoint smoke test passed for empty checkpoint listing, checkpoint creation, ref storage, checkpoint listing, duplicate checkpoint rejection, and missing-workspace rejection.
+- 2026-03-22: Completed US-007 by extending `src/checkpoints.ts` with `restoreCheckpoint`, validating the target workspace and checkpoint ref before resetting the worktree to the saved ref, and optionally running `git clean -fd` when `clean: true` is requested.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo checkpoint restore smoke test passed for tracked-file reset, default preservation of untracked files, optional cleanup of untracked files with `clean: true`, missing-checkpoint rejection, and missing-workspace rejection.
+- 2026-03-22: Completed US-008 by adding `src/create-copse.ts` to resolve the git repo root, apply default config values, and expose the workspace/checkpoint methods through a single factory, plus `src/index.ts` and the root `index.ts` package entry to re-export the public API surface.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo smoke test passed for repo-root resolution, default config values, workspace create/resolve/remove through `createCopse()`, and rejection with `CopseError` when `cwd` is not inside a git repo.
+- 2026-03-22: Completed US-009 by adding `src/cli.ts` with `parseArgs`-based workspace commands, top-level and command-specific help text, stdout/stderr exit handling, and package bin wiring for the `copse` CLI.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo CLI smoke test passed for `--help`, `create`, `list`, `resolve`, `remove`, and non-zero error handling for resolving a missing workspace.
+- 2026-03-22: Completed US-010 by extending `src/cli.ts` with `checkpoint create`, `checkpoint list`, and `checkpoint restore` subcommands, adding checkpoint-specific help text, printing checkpoint refs and checkpoint tables to stdout, and preserving non-zero stderr error handling through the existing CLI error path.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo CLI smoke test passed for `checkpoint --help`, `checkpoint create`, `checkpoint list`, `checkpoint restore --clean`, and non-zero error handling for listing checkpoints from a missing workspace.

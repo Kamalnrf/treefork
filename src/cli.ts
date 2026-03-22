@@ -9,6 +9,7 @@ const HELP_TEXT = `Usage:
   copse list
   copse resolve <name>
   copse remove <name> [--force]
+  copse checkpoint <command>
   copse --help`;
 
 const CREATE_HELP_TEXT = `Usage:
@@ -22,6 +23,21 @@ const RESOLVE_HELP_TEXT = `Usage:
 
 const REMOVE_HELP_TEXT = `Usage:
   copse remove <name> [--force]`;
+
+const CHECKPOINT_HELP_TEXT = `Usage:
+  copse checkpoint create <workspace> <name>
+  copse checkpoint list <workspace>
+  copse checkpoint restore <workspace> <name> [--clean]
+  copse checkpoint --help`;
+
+const CHECKPOINT_CREATE_HELP_TEXT = `Usage:
+  copse checkpoint create <workspace> <name>`;
+
+const CHECKPOINT_LIST_HELP_TEXT = `Usage:
+  copse checkpoint list <workspace>`;
+
+const CHECKPOINT_RESTORE_HELP_TEXT = `Usage:
+  copse checkpoint restore <workspace> <name> [--clean]`;
 
 type Writer = Pick<NodeJS.WriteStream, "write">;
 
@@ -59,12 +75,29 @@ function ensureNoExtraPositionals(
 function requireSingleName(
   positionals: readonly string[],
   helpText: string,
+  label = "workspace name",
 ): string {
   if (positionals.length !== 1) {
-    throw new CopseError(`Expected exactly one workspace name.\n${helpText}`);
+    throw new CopseError(`Expected exactly one ${label}.\n${helpText}`);
   }
 
   return positionals[0]!;
+}
+
+function requireWorkspaceAndCheckpointNames(
+  positionals: readonly string[],
+  helpText: string,
+): { workspace: string; name: string } {
+  if (positionals.length !== 2) {
+    throw new CopseError(
+      `Expected exactly one workspace name and one checkpoint name.\n${helpText}`,
+    );
+  }
+
+  return {
+    workspace: positionals[0]!,
+    name: positionals[1]!,
+  };
 }
 
 async function runCreate(args: readonly string[], stdout: Writer): Promise<void> {
@@ -191,6 +224,135 @@ async function runRemove(args: readonly string[], stdout: Writer): Promise<void>
   writeLine(stdout, `Removed workspace "${name}".`);
 }
 
+async function runCheckpointCreate(
+  args: readonly string[],
+  stdout: Writer,
+): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      help: {
+        type: "boolean",
+        short: "h",
+      },
+    },
+    strict: true,
+  });
+
+  if (values.help) {
+    writeLine(stdout, CHECKPOINT_CREATE_HELP_TEXT);
+    return;
+  }
+
+  const { workspace, name } = requireWorkspaceAndCheckpointNames(
+    positionals,
+    CHECKPOINT_CREATE_HELP_TEXT,
+  );
+  const copse = await createCopse();
+  const checkpoint = await copse.checkpoints.create({
+    workspace,
+    name,
+  });
+
+  writeLine(stdout, checkpoint.ref);
+}
+
+async function runCheckpointList(
+  args: readonly string[],
+  stdout: Writer,
+): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      help: {
+        type: "boolean",
+        short: "h",
+      },
+    },
+    strict: true,
+  });
+
+  if (values.help) {
+    writeLine(stdout, CHECKPOINT_LIST_HELP_TEXT);
+    return;
+  }
+
+  const workspace = requireSingleName(
+    positionals,
+    CHECKPOINT_LIST_HELP_TEXT,
+    "workspace name",
+  );
+  const copse = await createCopse();
+  const checkpoints = await copse.checkpoints.list({ workspace });
+  const rows = checkpoints.map((checkpoint) => [checkpoint.name, checkpoint.commit]);
+
+  writeLine(stdout, formatTable(["NAME", "COMMIT"], rows));
+}
+
+async function runCheckpointRestore(
+  args: readonly string[],
+  stdout: Writer,
+): Promise<void> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      clean: {
+        type: "boolean",
+      },
+      help: {
+        type: "boolean",
+        short: "h",
+      },
+    },
+    strict: true,
+  });
+
+  if (values.help) {
+    writeLine(stdout, CHECKPOINT_RESTORE_HELP_TEXT);
+    return;
+  }
+
+  const { workspace, name } = requireWorkspaceAndCheckpointNames(
+    positionals,
+    CHECKPOINT_RESTORE_HELP_TEXT,
+  );
+  const copse = await createCopse();
+
+  await copse.checkpoints.restore({
+    workspace,
+    name,
+    clean: values.clean,
+  });
+
+  writeLine(stdout, `Restored checkpoint "${name}" for workspace "${workspace}".`);
+}
+
+async function runCheckpoint(args: readonly string[], stdout: Writer): Promise<void> {
+  const [command, ...rest] = args;
+
+  if (isHelpCommand(command)) {
+    writeLine(stdout, CHECKPOINT_HELP_TEXT);
+    return;
+  }
+
+  switch (command) {
+    case "create":
+      await runCheckpointCreate(rest, stdout);
+      return;
+    case "list":
+      await runCheckpointList(rest, stdout);
+      return;
+    case "restore":
+      await runCheckpointRestore(rest, stdout);
+      return;
+    default:
+      throw new CopseError(`Unknown checkpoint command "${command}".\n${CHECKPOINT_HELP_TEXT}`);
+  }
+}
+
 function isHelpCommand(command: string | undefined): boolean {
   return command === undefined || command === "--help" || command === "-h" || command === "help";
 }
@@ -228,6 +390,9 @@ export async function runCli(
         return 0;
       case "remove":
         await runRemove(rest, stdout);
+        return 0;
+      case "checkpoint":
+        await runCheckpoint(rest, stdout);
         return 0;
       default:
         throw new CopseError(`Unknown command "${command}".\n${HELP_TEXT}`);

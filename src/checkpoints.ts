@@ -1,5 +1,6 @@
 import {
   CheckpointExistsError,
+  CheckpointNotFoundError,
   CopseGitError,
   WorkspaceNotFoundError,
 } from "./errors";
@@ -10,10 +11,13 @@ import type {
   CreateCheckpointOptions,
   ListCheckpointsOptions,
   ResolvedConfig,
+  RestoreCheckpointOptions,
 } from "./types";
 import { resolveWorkspace } from "./workspaces";
 
 const HEAD_REF = "HEAD";
+const CLEAN_WORKTREE_ARGS = ["clean", "-fd"] as const;
+const RESET_HARD_ARGS = ["reset", "--hard"] as const;
 
 function checkpointRefPrefix(config: ResolvedConfig): string {
   return config.checkpointRefPrefix.replace(/\/+$/, "");
@@ -159,4 +163,25 @@ export async function listCheckpoints(
   ]);
 
   return parseCheckpointList(output, workspaceName, namespace);
+}
+
+export async function restoreCheckpoint(
+  config: ResolvedConfig,
+  options: RestoreCheckpointOptions,
+): Promise<void> {
+  const workspace = await getWorkspaceInfo(config, options.workspace);
+  const checkpointName = sanitizeName(options.name);
+  const ref = checkpointRef(config, workspace.name, checkpointName);
+
+  if (!(await checkpointExists(config, ref))) {
+    throw new CheckpointNotFoundError(
+      `Checkpoint "${checkpointName}" was not found for workspace "${workspace.name}".`,
+    );
+  }
+
+  await git(workspace.path, [...RESET_HARD_ARGS, ref]);
+
+  if (options.clean === true) {
+    await git(workspace.path, CLEAN_WORKTREE_ARGS);
+  }
 }

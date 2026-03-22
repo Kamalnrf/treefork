@@ -15,7 +15,7 @@ Started: 2026-03-22
 - [x] US-008: createCopse factory and public API
 - [x] US-009: CLI — workspace commands
 - [x] US-010: CLI — checkpoint commands
-- [ ] US-011: CLI config file loading
+- [x] US-011: CLI config file loading
 - [ ] US-012: Integration tests — workspace lifecycle
 - [ ] US-013: Integration tests — checkpoint lifecycle
 
@@ -51,3 +51,6 @@ Started: 2026-03-22
 - 2026-03-22: Completed US-010 by extending `src/cli.ts` with `checkpoint create`, `checkpoint list`, and `checkpoint restore` subcommands, adding checkpoint-specific help text, printing checkpoint refs and checkpoint tables to stdout, and preserving non-zero stderr error handling through the existing CLI error path.
 - Verification: `bunx tsc --noEmit` passed.
 - Verification: temporary-repo CLI smoke test passed for `checkpoint --help`, `checkpoint create`, `checkpoint list`, `checkpoint restore --clean`, and non-zero error handling for listing checkpoints from a missing workspace.
+- 2026-03-22: Completed US-011 by adding `src/config.ts` with upward `copse.config.json` discovery plus global `~/.config/copse/config.json` fallback, validating the supported CLI config keys, and wiring `src/cli.ts` to load that config before creating Copse instances while leaving the library factory programmatic-only.
+- Verification: `bunx tsc --noEmit` passed.
+- Verification: temporary-repo CLI config smoke test passed for repo-local config discovery from a nested directory, global config fallback, `create --base` overriding configured `defaultBaseRef`, custom checkpoint ref prefixes, and `createCopse()` ignoring config files when used directly.

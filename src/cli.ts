@@ -2,7 +2,9 @@
 
 import { parseArgs } from "node:util";
 
+import { loadConfig } from "./config";
 import { CopseError, WorkspaceNotFoundError, createCopse } from "./index";
+import type { CopseConfig } from "./types";
 
 const HELP_TEXT = `Usage:
   copse create <name> [--base <ref>]
@@ -43,6 +45,17 @@ type Writer = Pick<NodeJS.WriteStream, "write">;
 
 function writeLine(writer: Writer, line = ""): void {
   writer.write(`${line}\n`);
+}
+
+async function createCliCopse(configOverrides: Omit<CopseConfig, "cwd"> = {}) {
+  const cwd = process.cwd();
+  const fileConfig = await loadConfig(cwd);
+
+  return createCopse({
+    cwd,
+    ...fileConfig,
+    ...configOverrides,
+  });
 }
 
 function formatTable(headers: readonly string[], rows: readonly string[][]): string {
@@ -122,7 +135,7 @@ async function runCreate(args: readonly string[], stdout: Writer): Promise<void>
   }
 
   const name = requireSingleName(positionals, CREATE_HELP_TEXT);
-  const copse = await createCopse();
+  const copse = await createCliCopse();
   const workspace = await copse.workspaces.create({
     name,
     baseRef: values.base,
@@ -151,7 +164,7 @@ async function runList(args: readonly string[], stdout: Writer): Promise<void> {
 
   ensureNoExtraPositionals(positionals, LIST_HELP_TEXT);
 
-  const copse = await createCopse();
+  const copse = await createCliCopse();
   const workspaces = await copse.workspaces.list();
   const rows = workspaces.map((workspace) => [
     workspace.name,
@@ -182,7 +195,7 @@ async function runResolve(args: readonly string[], stdout: Writer): Promise<void
   }
 
   const name = requireSingleName(positionals, RESOLVE_HELP_TEXT);
-  const copse = await createCopse();
+  const copse = await createCliCopse();
   const workspace = await copse.workspaces.resolve({ name });
 
   if (workspace === null) {
@@ -214,7 +227,7 @@ async function runRemove(args: readonly string[], stdout: Writer): Promise<void>
   }
 
   const name = requireSingleName(positionals, REMOVE_HELP_TEXT);
-  const copse = await createCopse();
+  const copse = await createCliCopse();
 
   await copse.workspaces.remove({
     name,
@@ -249,7 +262,7 @@ async function runCheckpointCreate(
     positionals,
     CHECKPOINT_CREATE_HELP_TEXT,
   );
-  const copse = await createCopse();
+  const copse = await createCliCopse();
   const checkpoint = await copse.checkpoints.create({
     workspace,
     name,
@@ -284,7 +297,7 @@ async function runCheckpointList(
     CHECKPOINT_LIST_HELP_TEXT,
     "workspace name",
   );
-  const copse = await createCopse();
+  const copse = await createCliCopse();
   const checkpoints = await copse.checkpoints.list({ workspace });
   const rows = checkpoints.map((checkpoint) => [checkpoint.name, checkpoint.commit]);
 
@@ -319,7 +332,7 @@ async function runCheckpointRestore(
     positionals,
     CHECKPOINT_RESTORE_HELP_TEXT,
   );
-  const copse = await createCopse();
+  const copse = await createCliCopse();
 
   await copse.checkpoints.restore({
     workspace,

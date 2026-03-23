@@ -7,7 +7,7 @@
     "url": "https://github.com/Kamalnrf/treefork.git"
   },
   "bin": {
-    "treefork": "./dist/cli.js"
+    "treefork": "./dist/src/cli.js"
   },
   "files": [
     "dist"

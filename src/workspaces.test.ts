@@ -6,13 +6,13 @@ import { describe, expect, test } from "bun:test";
 
 import { InvalidNameError, WorkspaceExistsError } from "./errors";
 import { git } from "./git";
-import { createCopse } from "./index";
-import type { Copse, WorkspaceInfo } from "./types";
+import { createBract } from "./index";
+import type { Bract, WorkspaceInfo } from "./types";
 
 type TestRepo = {
   repoRoot: string;
   storageDir: string;
-  copse: Copse;
+  bract: Bract;
 };
 
 async function pathExists(path: string): Promise<boolean> {
@@ -29,21 +29,21 @@ function sortWorkspaces(workspaces: WorkspaceInfo[]): WorkspaceInfo[] {
 }
 
 async function createTestRepo(): Promise<TestRepo> {
-  const repoRoot = await mkdtemp(join(tmpdir(), "copse-repo-"));
-  const storageDir = await mkdtemp(join(tmpdir(), "copse-storage-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "bract-repo-"));
+  const storageDir = await mkdtemp(join(tmpdir(), "bract-storage-"));
 
   try {
     await git(repoRoot, ["init"]);
-    await git(repoRoot, ["config", "user.name", "Copse Tests"]);
-    await git(repoRoot, ["config", "user.email", "copse@example.com"]);
-    await writeFile(join(repoRoot, "README.md"), "# Copse\n");
+    await git(repoRoot, ["config", "user.name", "Bract Tests"]);
+    await git(repoRoot, ["config", "user.email", "bract@example.com"]);
+    await writeFile(join(repoRoot, "README.md"), "# Bract\n");
     await git(repoRoot, ["add", "README.md"]);
     await git(repoRoot, ["commit", "-m", "Initial commit"]);
 
     return {
       repoRoot,
       storageDir,
-      copse: await createCopse({ cwd: repoRoot, storageDir }),
+      bract: await createBract({ cwd: repoRoot, storageDir }),
     };
   } catch (error) {
     await rm(repoRoot, { recursive: true, force: true });
@@ -63,13 +63,13 @@ describe("workspace lifecycle integration", () => {
 
     try {
       const head = await git(repo.repoRoot, ["rev-parse", "HEAD"]);
-      const workspace = await repo.copse.workspaces.create({ name: "agent" });
+      const workspace = await repo.bract.workspaces.create({ name: "agent" });
       const expectedPath = await realpath(join(repo.storageDir, "agent"));
 
       expect(workspace).toEqual({
         name: "agent",
         path: expectedPath,
-        branch: "copse/agent",
+        branch: "bract/agent",
         head,
       });
       expect(await pathExists(workspace.path)).toBe(true);
@@ -82,12 +82,12 @@ describe("workspace lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      expect(await repo.copse.workspaces.list()).toEqual([]);
+      expect(await repo.bract.workspaces.list()).toEqual([]);
 
-      const alpha = await repo.copse.workspaces.create({ name: "alpha" });
-      const beta = await repo.copse.workspaces.create({ name: "beta" });
+      const alpha = await repo.bract.workspaces.create({ name: "alpha" });
+      const beta = await repo.bract.workspaces.create({ name: "beta" });
 
-      expect(sortWorkspaces(await repo.copse.workspaces.list())).toEqual(
+      expect(sortWorkspaces(await repo.bract.workspaces.list())).toEqual(
         sortWorkspaces([alpha, beta]),
       );
     } finally {
@@ -99,10 +99,10 @@ describe("workspace lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      const workspace = await repo.copse.workspaces.create({ name: "agent" });
+      const workspace = await repo.bract.workspaces.create({ name: "agent" });
 
-      await expect(repo.copse.workspaces.resolve({ name: "agent" })).resolves.toEqual(workspace);
-      await expect(repo.copse.workspaces.resolve({ name: "missing" })).resolves.toBeNull();
+      await expect(repo.bract.workspaces.resolve({ name: "agent" })).resolves.toEqual(workspace);
+      await expect(repo.bract.workspaces.resolve({ name: "missing" })).resolves.toBeNull();
     } finally {
       await cleanupTestRepo(repo);
     }
@@ -112,13 +112,13 @@ describe("workspace lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      const workspace = await repo.copse.workspaces.create({ name: "agent" });
+      const workspace = await repo.bract.workspaces.create({ name: "agent" });
 
-      await repo.copse.workspaces.remove({ name: "agent" });
+      await repo.bract.workspaces.remove({ name: "agent" });
 
       expect(await pathExists(workspace.path)).toBe(false);
-      expect(await repo.copse.workspaces.resolve({ name: "agent" })).toBeNull();
-      expect(await git(repo.repoRoot, ["branch", "--list", "copse/agent"])).toBe("");
+      expect(await repo.bract.workspaces.resolve({ name: "agent" })).toBeNull();
+      expect(await git(repo.repoRoot, ["branch", "--list", "bract/agent"])).toBe("");
     } finally {
       await cleanupTestRepo(repo);
     }
@@ -128,9 +128,9 @@ describe("workspace lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      await repo.copse.workspaces.create({ name: "agent" });
+      await repo.bract.workspaces.create({ name: "agent" });
 
-      await expect(repo.copse.workspaces.create({ name: "agent" })).rejects.toBeInstanceOf(
+      await expect(repo.bract.workspaces.create({ name: "agent" })).rejects.toBeInstanceOf(
         WorkspaceExistsError,
       );
     } finally {
@@ -142,13 +142,13 @@ describe("workspace lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      const workspace = await repo.copse.workspaces.create({ name: "agent" });
+      const workspace = await repo.bract.workspaces.create({ name: "agent" });
 
       await writeFile(join(workspace.path, "scratch.txt"), "dirty\n");
-      await repo.copse.workspaces.remove({ name: "agent", force: true });
+      await repo.bract.workspaces.remove({ name: "agent", force: true });
 
       expect(await pathExists(workspace.path)).toBe(false);
-      expect(await git(repo.repoRoot, ["branch", "--list", "copse/agent"])).toBe("");
+      expect(await git(repo.repoRoot, ["branch", "--list", "bract/agent"])).toBe("");
     } finally {
       await cleanupTestRepo(repo);
     }
@@ -159,7 +159,7 @@ describe("workspace lifecycle integration", () => {
 
     try {
       for (const name of ["", ".", ".."]) {
-        await expect(repo.copse.workspaces.create({ name })).rejects.toBeInstanceOf(
+        await expect(repo.bract.workspaces.create({ name })).rejects.toBeInstanceOf(
           InvalidNameError,
         );
       }

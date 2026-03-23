@@ -1,9 +1,9 @@
-export { createCopse } from "./create-copse";
+export { createBract } from "./create-bract";
 export {
   CheckpointExistsError,
   CheckpointNotFoundError,
-  CopseError,
-  CopseGitError,
+  BractError,
+  BractGitError,
   InvalidNameError,
   WorkspaceExistsError,
   WorkspaceNotFoundError,
@@ -11,8 +11,8 @@ export {
 export type {
   CheckpointInfo,
   CheckpointMethods,
-  Copse,
-  CopseConfig,
+  Bract,
+  BractConfig,
   CreateCheckpointOptions,
   CreateWorkspaceOptions,
   ListCheckpointsOptions,

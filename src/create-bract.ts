@@ -1,30 +1,29 @@
 import { mkdir } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
-
-import { CopseError, CopseGitError } from "./errors";
+import { createCheckpoint, listCheckpoints, restoreCheckpoint } from "./checkpoints";
+import { BractError, BractGitError } from "./errors";
 import { git } from "./git";
 import { ensureMirror, mirrorPath } from "./mirror";
 import { defaultStorageDir } from "./naming";
 import type {
+  Bract,
+  BractConfig,
   CheckpointMethods,
-  Copse,
-  CopseConfig,
   ResolvedConfig,
   WorkspaceMethods,
 } from "./types";
-import { createCheckpoint, listCheckpoints, restoreCheckpoint } from "./checkpoints";
 import { createWorkspace, listWorkspaces, removeWorkspace, resolveWorkspace } from "./workspaces";
 
 const DEFAULT_BASE_REF = "HEAD";
-const DEFAULT_BRANCH_PREFIX = "copse/";
-const DEFAULT_CHECKPOINT_REF_PREFIX = "refs/copse/checkpoints";
+const DEFAULT_BRANCH_PREFIX = "bract/";
+const DEFAULT_CHECKPOINT_REF_PREFIX = "refs/bract/checkpoints";
 
 async function resolveRepoRoot(cwd: string): Promise<string> {
   try {
     return await git(cwd, ["rev-parse", "--show-toplevel"]);
   } catch (error) {
-    if (error instanceof CopseGitError) {
-      throw new CopseError(`Directory "${cwd}" is not inside a git repository.`, {
+    if (error instanceof BractGitError) {
+      throw new BractError(`Directory "${cwd}" is not inside a git repository.`, {
         cause: error,
       });
     }
@@ -33,7 +32,7 @@ async function resolveRepoRoot(cwd: string): Promise<string> {
   }
 }
 
-function resolveLocalConfig(options: CopseConfig | undefined, repoRoot: string): ResolvedConfig {
+function resolveLocalConfig(options: BractConfig | undefined, repoRoot: string): ResolvedConfig {
   const cwd = options?.cwd ?? process.cwd();
 
   return {
@@ -48,9 +47,9 @@ function resolveLocalConfig(options: CopseConfig | undefined, repoRoot: string):
   };
 }
 
-async function resolveRemoteConfig(options: CopseConfig): Promise<ResolvedConfig> {
+async function resolveRemoteConfig(options: BractConfig): Promise<ResolvedConfig> {
   const cwd = options.cwd ?? process.cwd();
-  const storageDir = resolvePath(cwd, options.storageDir ?? ".copse");
+  const storageDir = resolvePath(cwd, options.storageDir ?? ".bract");
   const mirror = mirrorPath(storageDir, options.repo!);
 
   await mkdir(storageDir, { recursive: true });
@@ -89,7 +88,7 @@ function createCheckpointMethods(config: ResolvedConfig): CheckpointMethods {
   };
 }
 
-export async function createCopse(options: CopseConfig = {}): Promise<Copse> {
+export async function createBract(options: BractConfig = {}): Promise<Bract> {
   const config = options.repo
     ? await resolveRemoteConfig(options)
     : resolveLocalConfig(options, await resolveRepoRoot(options.cwd ?? process.cwd()));

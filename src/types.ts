@@ -1,4 +1,4 @@
-export type CopseConfig = {
+export type BractConfig = {
   cwd?: string;
   repo?: string;
   storageDir?: string;
@@ -7,7 +7,7 @@ export type CopseConfig = {
   checkpointRefPrefix?: string;
 };
 
-export type ResolvedConfig = Required<Omit<CopseConfig, "repo">> & {
+export type ResolvedConfig = Required<Omit<BractConfig, "repo">> & {
   mode: "local" | "remote";
   repoRoot: string;
   gitDir: string;
@@ -69,7 +69,7 @@ export type CheckpointMethods = {
   restore: (options: RestoreCheckpointOptions) => Promise<void>;
 };
 
-export type Copse = {
+export type Bract = {
   config: ResolvedConfig;
   workspaces: WorkspaceMethods;
   checkpoints: CheckpointMethods;

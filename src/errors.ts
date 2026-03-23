@@ -1,11 +1,11 @@
-export class CopseError extends Error {
+export class BractError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = new.target.name;
   }
 }
 
-export class CopseGitError extends CopseError {
+export class BractGitError extends BractError {
   readonly stderr: string;
   readonly exitCode: number | null;
   readonly command: readonly string[];
@@ -30,12 +30,12 @@ export class CopseGitError extends CopseError {
   }
 }
 
-export class WorkspaceNotFoundError extends CopseError {}
+export class WorkspaceNotFoundError extends BractError {}
 
-export class WorkspaceExistsError extends CopseError {}
+export class WorkspaceExistsError extends BractError {}
 
-export class CheckpointNotFoundError extends CopseError {}
+export class CheckpointNotFoundError extends BractError {}
 
-export class CheckpointExistsError extends CopseError {}
+export class CheckpointExistsError extends BractError {}
 
-export class InvalidNameError extends CopseError {}
+export class InvalidNameError extends BractError {}

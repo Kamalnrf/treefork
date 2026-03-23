@@ -1,7 +1,7 @@
 import { access, mkdir, realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
-import { CopseError, CopseGitError, WorkspaceExistsError, WorkspaceNotFoundError } from "./errors";
+import { BractError, BractGitError, WorkspaceExistsError, WorkspaceNotFoundError } from "./errors";
 import { git, gitDir as gitWithDir } from "./git";
 import { nameFromBranch, sanitizeName, toBranchName, toWorkspacePath } from "./naming";
 import type {
@@ -116,12 +116,12 @@ function toWorkspaceInfo(entry: ParsedWorktree, branchPrefix: string): Workspace
   };
 }
 
-function isDirtyWorktreeError(error: unknown): error is CopseGitError {
-  return error instanceof CopseGitError && DIRTY_WORKTREE_PATTERN.test(error.stderr);
+function isDirtyWorktreeError(error: unknown): error is BractGitError {
+  return error instanceof BractGitError && DIRTY_WORKTREE_PATTERN.test(error.stderr);
 }
 
-function isMissingBranchError(error: unknown): error is CopseGitError {
-  return error instanceof CopseGitError && MISSING_BRANCH_PATTERN.test(error.stderr);
+function isMissingBranchError(error: unknown): error is BractGitError {
+  return error instanceof BractGitError && MISSING_BRANCH_PATTERN.test(error.stderr);
 }
 
 async function deleteCheckpointRefs(config: ResolvedConfig, workspaceName: string): Promise<void> {
@@ -244,7 +244,7 @@ export async function removeWorkspace(
     await repoGit(config, args);
   } catch (error) {
     if (!force && isDirtyWorktreeError(error)) {
-      throw new CopseError(
+      throw new BractError(
         `Workspace "${name}" has uncommitted changes. Re-run with force: true to remove it.`,
         { cause: error },
       );

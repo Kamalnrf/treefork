@@ -1,13 +1,13 @@
 {
-  "name": "copse",
+  "name": "bract",
   "version": "0.0.1",
   "description": "AI agent workspace isolation using git worktrees",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kamalnrf/copse.git"
+    "url": "https://github.com/Kamalnrf/bract.git"
   },
   "bin": {
-    "copse": "./dist/cli.js"
+    "bract": "./dist/cli.js"
   },
   "files": [
     "dist"

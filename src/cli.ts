@@ -3,14 +3,14 @@
 import { defineCommand, runMain } from "citty";
 
 import { loadConfig } from "./config";
-import { WorkspaceNotFoundError, createCopse } from "./index";
-import type { CopseConfig } from "./types";
+import { WorkspaceNotFoundError, createBract } from "./index";
+import type { BractConfig } from "./types";
 
-async function createCliCopse(configOverrides: Omit<CopseConfig, "cwd"> = {}) {
+async function createCliBract(configOverrides: Omit<BractConfig, "cwd"> = {}) {
   const cwd = process.cwd();
   const fileConfig = await loadConfig(cwd);
 
-  return createCopse({
+  return createBract({
     cwd,
     ...fileConfig,
     ...configOverrides,
@@ -39,8 +39,8 @@ const createCommand = defineCommand({
     repo: { type: "string", description: "Remote git URL to clone from" },
   },
   async run({ args }) {
-    const copse = await createCliCopse({ repo: args.repo });
-    const workspace = await copse.workspaces.create({
+    const bract = await createCliBract({ repo: args.repo });
+    const workspace = await bract.workspaces.create({
       name: args.name,
       baseRef: args.base,
     });
@@ -52,8 +52,8 @@ const createCommand = defineCommand({
 const listCommand = defineCommand({
   meta: { name: "list", description: "List all workspaces" },
   async run() {
-    const copse = await createCliCopse();
-    const workspaces = await copse.workspaces.list();
+    const bract = await createCliBract();
+    const workspaces = await bract.workspaces.list();
     const rows = workspaces.map((workspace) => [
       workspace.name,
       workspace.branch,
@@ -71,8 +71,8 @@ const resolveCommand = defineCommand({
     name: { type: "positional", description: "Workspace name", required: true },
   },
   async run({ args }) {
-    const copse = await createCliCopse();
-    const workspace = await copse.workspaces.resolve({ name: args.name });
+    const bract = await createCliBract();
+    const workspace = await bract.workspaces.resolve({ name: args.name });
 
     if (workspace === null) {
       throw new WorkspaceNotFoundError(`Workspace "${args.name}" was not found.`);
@@ -89,9 +89,9 @@ const removeCommand = defineCommand({
     force: { type: "boolean", description: "Force removal even with uncommitted changes" },
   },
   async run({ args }) {
-    const copse = await createCliCopse();
+    const bract = await createCliBract();
 
-    await copse.workspaces.remove({
+    await bract.workspaces.remove({
       name: args.name,
       force: args.force,
     });
@@ -107,8 +107,8 @@ const checkpointCreateCommand = defineCommand({
     name: { type: "positional", description: "Checkpoint name", required: true },
   },
   async run({ args }) {
-    const copse = await createCliCopse();
-    const checkpoint = await copse.checkpoints.create({
+    const bract = await createCliBract();
+    const checkpoint = await bract.checkpoints.create({
       workspace: args.workspace,
       name: args.name,
     });
@@ -123,8 +123,8 @@ const checkpointListCommand = defineCommand({
     workspace: { type: "positional", description: "Workspace name", required: true },
   },
   async run({ args }) {
-    const copse = await createCliCopse();
-    const checkpoints = await copse.checkpoints.list({ workspace: args.workspace });
+    const bract = await createCliBract();
+    const checkpoints = await bract.checkpoints.list({ workspace: args.workspace });
     const rows = checkpoints.map((checkpoint) => [checkpoint.name, checkpoint.commit]);
 
     console.log(formatTable(["NAME", "COMMIT"], rows));
@@ -139,9 +139,9 @@ const checkpointRestoreCommand = defineCommand({
     clean: { type: "boolean", description: "Clean untracked files after restore" },
   },
   async run({ args }) {
-    const copse = await createCliCopse();
+    const bract = await createCliBract();
 
-    await copse.checkpoints.restore({
+    await bract.checkpoints.restore({
       workspace: args.workspace,
       name: args.name,
       clean: args.clean,
@@ -161,7 +161,7 @@ const checkpointCommand = defineCommand({
 });
 
 const main = defineCommand({
-  meta: { name: "copse", description: "AI agent workspace isolation using git worktrees" },
+  meta: { name: "bract", description: "AI agent workspace isolation using git worktrees" },
   subCommands: {
     create: createCommand,
     list: listCommand,

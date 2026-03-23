@@ -28,11 +28,7 @@ export function mirrorPath(storageDir: string, repoUrl: string): string {
   return join(storageDir, ".mirrors", mirrorDirName(repoUrl));
 }
 
-export async function ensureMirror(
-  repoUrl: string,
-  mirrorDir: string,
-  cwd: string,
-): Promise<void> {
+export async function ensureMirror(repoUrl: string, mirrorDir: string, cwd: string): Promise<void> {
   if (await pathExists(mirrorDir)) {
     await fetchMirror(mirrorDir, cwd);
     return;

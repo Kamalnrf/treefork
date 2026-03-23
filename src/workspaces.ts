@@ -1,12 +1,7 @@
 import { access, mkdir, realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
-import {
-  CopseError,
-  CopseGitError,
-  WorkspaceExistsError,
-  WorkspaceNotFoundError,
-} from "./errors";
+import { CopseError, CopseGitError, WorkspaceExistsError, WorkspaceNotFoundError } from "./errors";
 import { git, gitDir as gitWithDir } from "./git";
 import { nameFromBranch, sanitizeName, toBranchName, toWorkspacePath } from "./naming";
 import type {
@@ -102,10 +97,7 @@ function parseWorktreeList(output: string): ParsedWorktree[] {
     .filter((entry) => entry.path !== "");
 }
 
-function toWorkspaceInfo(
-  entry: ParsedWorktree,
-  branchPrefix: string,
-): WorkspaceInfo | null {
+function toWorkspaceInfo(entry: ParsedWorktree, branchPrefix: string): WorkspaceInfo | null {
   if (entry.branch === null || entry.head === null) {
     return null;
   }
@@ -132,16 +124,9 @@ function isMissingBranchError(error: unknown): error is CopseGitError {
   return error instanceof CopseGitError && MISSING_BRANCH_PATTERN.test(error.stderr);
 }
 
-async function deleteCheckpointRefs(
-  config: ResolvedConfig,
-  workspaceName: string,
-): Promise<void> {
+async function deleteCheckpointRefs(config: ResolvedConfig, workspaceName: string): Promise<void> {
   const refNamespace = checkpointRefNamespace(config, workspaceName);
-  const output = await repoGit(config, [
-    "for-each-ref",
-    refNamespace,
-    "--format=%(refname)",
-  ]);
+  const output = await repoGit(config, ["for-each-ref", refNamespace, "--format=%(refname)"]);
 
   for (const ref of output.split("\n")) {
     if (ref === "") {

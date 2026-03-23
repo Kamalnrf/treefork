@@ -39,17 +39,11 @@ function checkpointRef(
   return `${checkpointRefPrefix(config)}/${sanitizeName(workspaceName)}/${sanitizeName(checkpointName)}`;
 }
 
-function checkpointRefNamespace(
-  config: ResolvedConfig,
-  workspaceName: string,
-): string {
+function checkpointRefNamespace(config: ResolvedConfig, workspaceName: string): string {
   return `${checkpointRefPrefix(config)}/${sanitizeName(workspaceName)}/`;
 }
 
-async function getWorkspaceName(
-  config: ResolvedConfig,
-  workspaceName: string,
-): Promise<string> {
+async function getWorkspaceName(config: ResolvedConfig, workspaceName: string): Promise<string> {
   const workspace = await resolveWorkspace(config, { name: workspaceName });
 
   if (workspace === null) {
@@ -59,10 +53,7 @@ async function getWorkspaceName(
   return workspace.name;
 }
 
-async function getWorkspaceInfo(
-  config: ResolvedConfig,
-  workspaceName: string,
-) {
+async function getWorkspaceInfo(config: ResolvedConfig, workspaceName: string) {
   const workspace = await resolveWorkspace(config, { name: workspaceName });
 
   if (workspace === null) {
@@ -72,18 +63,12 @@ async function getWorkspaceInfo(
   return workspace;
 }
 
-async function checkpointExists(
-  config: ResolvedConfig,
-  ref: string,
-): Promise<boolean> {
+async function checkpointExists(config: ResolvedConfig, ref: string): Promise<boolean> {
   try {
     await repoGit(config, ["rev-parse", "--verify", "--quiet", ref]);
     return true;
   } catch (error) {
-    if (
-      error instanceof CopseGitError &&
-      (error.exitCode === 1 || error.exitCode === 128)
-    ) {
+    if (error instanceof CopseGitError && (error.exitCode === 1 || error.exitCode === 128)) {
       return false;
     }
 

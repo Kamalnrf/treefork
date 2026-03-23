@@ -20,16 +20,11 @@ async function createCliCopse(configOverrides: Omit<CopseConfig, "cwd"> = {}) {
 
 function formatTable(headers: readonly string[], rows: readonly string[][]): string {
   const widths = headers.map((header, columnIndex) =>
-    rows.reduce(
-      (width, row) => Math.max(width, row[columnIndex]?.length ?? 0),
-      header.length,
-    ),
+    rows.reduce((width, row) => Math.max(width, row[columnIndex]?.length ?? 0), header.length),
   );
 
   const formatRow = (row: readonly string[]) =>
-    row
-      .map((value, columnIndex) => value.padEnd(widths[columnIndex] ?? value.length))
-      .join("  ");
+    row.map((value, columnIndex) => value.padEnd(widths[columnIndex] ?? value.length)).join("  ");
 
   const separator = widths.map((width) => "-".repeat(width));
 

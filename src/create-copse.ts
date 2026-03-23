@@ -5,7 +5,13 @@ import { CopseError, CopseGitError } from "./errors";
 import { git } from "./git";
 import { ensureMirror, mirrorPath } from "./mirror";
 import { defaultStorageDir } from "./naming";
-import type { CheckpointMethods, Copse, CopseConfig, ResolvedConfig, WorkspaceMethods } from "./types";
+import type {
+  CheckpointMethods,
+  Copse,
+  CopseConfig,
+  ResolvedConfig,
+  WorkspaceMethods,
+} from "./types";
 import { createCheckpoint, listCheckpoints, restoreCheckpoint } from "./checkpoints";
 import { createWorkspace, listWorkspaces, removeWorkspace, resolveWorkspace } from "./workspaces";
 
@@ -38,8 +44,7 @@ function resolveLocalConfig(options: CopseConfig | undefined, repoRoot: string):
     storageDir: options?.storageDir ?? defaultStorageDir(repoRoot),
     defaultBaseRef: options?.defaultBaseRef ?? DEFAULT_BASE_REF,
     branchPrefix: options?.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
-    checkpointRefPrefix:
-      options?.checkpointRefPrefix ?? DEFAULT_CHECKPOINT_REF_PREFIX,
+    checkpointRefPrefix: options?.checkpointRefPrefix ?? DEFAULT_CHECKPOINT_REF_PREFIX,
   };
 }
 
@@ -59,8 +64,7 @@ async function resolveRemoteConfig(options: CopseConfig): Promise<ResolvedConfig
     storageDir,
     defaultBaseRef: options.defaultBaseRef ?? DEFAULT_BASE_REF,
     branchPrefix: options.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
-    checkpointRefPrefix:
-      options.checkpointRefPrefix ?? DEFAULT_CHECKPOINT_REF_PREFIX,
+    checkpointRefPrefix: options.checkpointRefPrefix ?? DEFAULT_CHECKPOINT_REF_PREFIX,
   };
 }
 

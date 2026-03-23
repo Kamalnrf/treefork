@@ -42,6 +42,10 @@ export async function git(cwd: string, args: readonly string[]): Promise<string>
   }
 }
 
-export async function gitDir(gitDirPath: string, cwd: string, args: readonly string[]): Promise<string> {
+export async function gitDir(
+  gitDirPath: string,
+  cwd: string,
+  args: readonly string[],
+): Promise<string> {
   return git(cwd, ["--git-dir", gitDirPath, ...args]);
 }

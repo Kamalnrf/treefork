@@ -102,9 +102,7 @@ describe("checkpoint lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      expect(
-        await repo.copse.checkpoints.list({ workspace: repo.workspace.name }),
-      ).toEqual([]);
+      expect(await repo.copse.checkpoints.list({ workspace: repo.workspace.name })).toEqual([]);
 
       const baseline = await repo.copse.checkpoints.create({
         workspace: repo.workspace.name,
@@ -117,9 +115,7 @@ describe("checkpoint lifecycle integration", () => {
       });
 
       expect(
-        sortCheckpoints(
-          await repo.copse.checkpoints.list({ workspace: repo.workspace.name }),
-        ),
+        sortCheckpoints(await repo.copse.checkpoints.list({ workspace: repo.workspace.name })),
       ).toEqual(sortCheckpoints([baseline, updated]));
     } finally {
       await cleanupTestRepo(repo);
@@ -150,9 +146,7 @@ describe("checkpoint lifecycle integration", () => {
       });
 
       expect(await git(repo.workspace.path, ["rev-parse", "HEAD"])).toBe(checkpoint.commit);
-      expect(await readFile(join(repo.workspace.path, "README.md"), "utf8")).toBe(
-        originalReadme,
-      );
+      expect(await readFile(join(repo.workspace.path, "README.md"), "utf8")).toBe(originalReadme);
     } finally {
       await cleanupTestRepo(repo);
     }

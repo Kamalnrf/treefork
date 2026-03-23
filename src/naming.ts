@@ -30,9 +30,7 @@ export function sanitizeName(input: string): string {
     throw invalidName(`Name "${input}" cannot contain path traversal sequences.`);
   }
 
-  const sanitized = trimmed
-    .replace(INVALID_NAME_PATTERN, "-")
-    .replace(EDGE_SEPARATOR_PATTERN, "");
+  const sanitized = trimmed.replace(INVALID_NAME_PATTERN, "-").replace(EDGE_SEPARATOR_PATTERN, "");
 
   if (sanitized === "") {
     throw invalidName(`Name "${input}" is not valid.`);

@@ -1,11 +1,11 @@
-export class BractError extends Error {
+export class TreeforkError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = new.target.name;
   }
 }
 
-export class BractGitError extends BractError {
+export class TreeforkGitError extends TreeforkError {
   readonly stderr: string;
   readonly exitCode: number | null;
   readonly command: readonly string[];
@@ -30,12 +30,12 @@ export class BractGitError extends BractError {
   }
 }
 
-export class WorkspaceNotFoundError extends BractError {}
+export class WorkspaceNotFoundError extends TreeforkError {}
 
-export class WorkspaceExistsError extends BractError {}
+export class WorkspaceExistsError extends TreeforkError {}
 
-export class CheckpointNotFoundError extends BractError {}
+export class CheckpointNotFoundError extends TreeforkError {}
 
-export class CheckpointExistsError extends BractError {}
+export class CheckpointExistsError extends TreeforkError {}
 
-export class InvalidNameError extends BractError {}
+export class InvalidNameError extends TreeforkError {}

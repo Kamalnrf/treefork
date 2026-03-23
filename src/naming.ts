@@ -2,8 +2,8 @@ import { basename, dirname, join } from "node:path";
 
 import { InvalidNameError } from "./errors";
 
-const DEFAULT_BRANCH_PREFIX = "bract/";
-const CHECKPOINT_REF_PREFIX = "refs/bract/checkpoints";
+const DEFAULT_BRANCH_PREFIX = "treefork/";
+const CHECKPOINT_REF_PREFIX = "refs/treefork/checkpoints";
 const INVALID_NAME_PATTERN = /[^A-Za-z0-9._-]+/g;
 const EDGE_SEPARATOR_PATTERN = /^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g;
 
@@ -52,7 +52,7 @@ export function toWorkspacePath(storageDir: string, name: string): string {
 }
 
 export function defaultStorageDir(repoRoot: string): string {
-  return join(dirname(repoRoot), `.${basename(repoRoot)}-bract`);
+  return join(dirname(repoRoot), `.${basename(repoRoot)}-treefork`);
 }
 
 export function nameFromBranch(branch: string, prefix = DEFAULT_BRANCH_PREFIX): string | null {

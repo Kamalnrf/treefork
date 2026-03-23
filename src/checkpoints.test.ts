@@ -6,13 +6,13 @@ import { describe, expect, test } from "bun:test";
 
 import { CheckpointExistsError, CheckpointNotFoundError } from "./errors";
 import { git } from "./git";
-import { createBract } from "./index";
-import type { CheckpointInfo, Bract, WorkspaceInfo } from "./types";
+import { createTreefork } from "./index";
+import type { CheckpointInfo, Treefork, WorkspaceInfo } from "./types";
 
 type TestRepo = {
   repoRoot: string;
   storageDir: string;
-  bract: Bract;
+  treefork: Treefork;
   workspace: WorkspaceInfo;
 };
 
@@ -30,24 +30,24 @@ function sortCheckpoints(checkpoints: CheckpointInfo[]): CheckpointInfo[] {
 }
 
 async function createTestRepo(): Promise<TestRepo> {
-  const repoRoot = await mkdtemp(join(tmpdir(), "bract-repo-"));
-  const storageDir = await mkdtemp(join(tmpdir(), "bract-storage-"));
+  const repoRoot = await mkdtemp(join(tmpdir(), "treefork-repo-"));
+  const storageDir = await mkdtemp(join(tmpdir(), "treefork-storage-"));
 
   try {
     await git(repoRoot, ["init"]);
-    await git(repoRoot, ["config", "user.name", "Bract Tests"]);
-    await git(repoRoot, ["config", "user.email", "bract@example.com"]);
-    await writeFile(join(repoRoot, "README.md"), "# Bract\n");
+    await git(repoRoot, ["config", "user.name", "Treefork Tests"]);
+    await git(repoRoot, ["config", "user.email", "treefork@example.com"]);
+    await writeFile(join(repoRoot, "README.md"), "# Treefork\n");
     await git(repoRoot, ["add", "README.md"]);
     await git(repoRoot, ["commit", "-m", "Initial commit"]);
 
-    const bract = await createBract({ cwd: repoRoot, storageDir });
-    const workspace = await bract.workspaces.create({ name: "agent" });
+    const treefork = await createTreefork({ cwd: repoRoot, storageDir });
+    const workspace = await treefork.workspaces.create({ name: "agent" });
 
     return {
       repoRoot,
       storageDir,
-      bract,
+      treefork,
       workspace,
     };
   } catch (error) {
@@ -81,7 +81,7 @@ describe("checkpoint lifecycle integration", () => {
 
     try {
       const commit = await git(repo.workspace.path, ["rev-parse", "HEAD"]);
-      const checkpoint = await repo.bract.checkpoints.create({
+      const checkpoint = await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "baseline",
       });
@@ -89,7 +89,7 @@ describe("checkpoint lifecycle integration", () => {
       expect(checkpoint).toEqual({
         workspace: "agent",
         name: "baseline",
-        ref: `${repo.bract.config.checkpointRefPrefix}/agent/baseline`,
+        ref: `${repo.treefork.config.checkpointRefPrefix}/agent/baseline`,
         commit,
       });
       expect(await git(repo.repoRoot, ["rev-parse", checkpoint.ref])).toBe(commit);
@@ -102,20 +102,20 @@ describe("checkpoint lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      expect(await repo.bract.checkpoints.list({ workspace: repo.workspace.name })).toEqual([]);
+      expect(await repo.treefork.checkpoints.list({ workspace: repo.workspace.name })).toEqual([]);
 
-      const baseline = await repo.bract.checkpoints.create({
+      const baseline = await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "baseline",
       });
-      await commitWorkspaceFile(repo, "README.md", "# Bract\n\nv2\n", "Update README");
-      const updated = await repo.bract.checkpoints.create({
+      await commitWorkspaceFile(repo, "README.md", "# Treefork\n\nv2\n", "Update README");
+      const updated = await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "updated",
       });
 
       expect(
-        sortCheckpoints(await repo.bract.checkpoints.list({ workspace: repo.workspace.name })),
+        sortCheckpoints(await repo.treefork.checkpoints.list({ workspace: repo.workspace.name })),
       ).toEqual(sortCheckpoints([baseline, updated]));
     } finally {
       await cleanupTestRepo(repo);
@@ -127,20 +127,20 @@ describe("checkpoint lifecycle integration", () => {
 
     try {
       const originalReadme = await readFile(join(repo.workspace.path, "README.md"), "utf8");
-      const checkpoint = await repo.bract.checkpoints.create({
+      const checkpoint = await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "baseline",
       });
       const updatedCommit = await commitWorkspaceFile(
         repo,
         "README.md",
-        "# Bract\n\nchanged\n",
+        "# Treefork\n\nchanged\n",
         "Change README",
       );
 
       expect(updatedCommit).not.toBe(checkpoint.commit);
 
-      await repo.bract.checkpoints.restore({
+      await repo.treefork.checkpoints.restore({
         workspace: repo.workspace.name,
         name: "baseline",
       });
@@ -156,7 +156,7 @@ describe("checkpoint lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      await repo.bract.checkpoints.create({
+      await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "baseline",
       });
@@ -164,7 +164,7 @@ describe("checkpoint lifecycle integration", () => {
       const scratchPath = join(repo.workspace.path, "scratch.txt");
       await writeFile(scratchPath, "temporary\n");
 
-      await repo.bract.checkpoints.restore({
+      await repo.treefork.checkpoints.restore({
         workspace: repo.workspace.name,
         name: "baseline",
         clean: true,
@@ -181,7 +181,7 @@ describe("checkpoint lifecycle integration", () => {
 
     try {
       await expect(
-        repo.bract.checkpoints.restore({
+        repo.treefork.checkpoints.restore({
           workspace: repo.workspace.name,
           name: "missing",
         }),
@@ -195,13 +195,13 @@ describe("checkpoint lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      await repo.bract.checkpoints.create({
+      await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "baseline",
       });
 
       await expect(
-        repo.bract.checkpoints.create({
+        repo.treefork.checkpoints.create({
           workspace: repo.workspace.name,
           name: "baseline",
         }),
@@ -215,22 +215,22 @@ describe("checkpoint lifecycle integration", () => {
     const repo = await createTestRepo();
 
     try {
-      await repo.bract.checkpoints.create({
+      await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "baseline",
       });
-      await commitWorkspaceFile(repo, "README.md", "# Bract\n\nv2\n", "Update README");
-      await repo.bract.checkpoints.create({
+      await commitWorkspaceFile(repo, "README.md", "# Treefork\n\nv2\n", "Update README");
+      await repo.treefork.checkpoints.create({
         workspace: repo.workspace.name,
         name: "updated",
       });
 
-      await repo.bract.workspaces.remove({ name: repo.workspace.name });
+      await repo.treefork.workspaces.remove({ name: repo.workspace.name });
 
       expect(
         await git(repo.repoRoot, [
           "for-each-ref",
-          `${repo.bract.config.checkpointRefPrefix}/${repo.workspace.name}/`,
+          `${repo.treefork.config.checkpointRefPrefix}/${repo.workspace.name}/`,
           "--format=%(refname)",
         ]),
       ).toBe("");

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { access } from "node:fs/promises";
 import { basename, join } from "node:path";
 
-import { BractError } from "./errors";
+import { TreeforkError } from "./errors";
 import { git, gitDir } from "./git";
 
 async function pathExists(path: string): Promise<boolean> {
@@ -37,7 +37,7 @@ export async function ensureMirror(repoUrl: string, mirrorDir: string, cwd: stri
   try {
     await git(cwd, ["clone", "--bare", repoUrl, mirrorDir]);
   } catch (error) {
-    throw new BractError(`Failed to clone "${repoUrl}".`, { cause: error });
+    throw new TreeforkError(`Failed to clone "${repoUrl}".`, { cause: error });
   }
 }
 
@@ -45,7 +45,7 @@ async function fetchMirror(mirrorDir: string, cwd: string): Promise<void> {
   try {
     await gitDir(mirrorDir, cwd, ["fetch", "--prune", "origin"]);
   } catch (error) {
-    throw new BractError(`Failed to fetch updates for mirror at "${mirrorDir}".`, {
+    throw new TreeforkError(`Failed to fetch updates for mirror at "${mirrorDir}".`, {
       cause: error,
     });
   }

@@ -3,14 +3,14 @@
 import { defineCommand, runMain } from "citty";
 
 import { loadConfig } from "./config";
-import { WorkspaceNotFoundError, createBract } from "./index";
-import type { BractConfig } from "./types";
+import { WorkspaceNotFoundError, createTreefork } from "./index";
+import type { TreeforkConfig } from "./types";
 
-async function createCliBract(configOverrides: Omit<BractConfig, "cwd"> = {}) {
+async function createCliTreefork(configOverrides: Omit<TreeforkConfig, "cwd"> = {}) {
   const cwd = process.cwd();
   const fileConfig = await loadConfig(cwd);
 
-  return createBract({
+  return createTreefork({
     cwd,
     ...fileConfig,
     ...configOverrides,
@@ -39,8 +39,8 @@ const createCommand = defineCommand({
     repo: { type: "string", description: "Remote git URL to clone from" },
   },
   async run({ args }) {
-    const bract = await createCliBract({ repo: args.repo });
-    const workspace = await bract.workspaces.create({
+    const treefork = await createCliTreefork({ repo: args.repo });
+    const workspace = await treefork.workspaces.create({
       name: args.name,
       baseRef: args.base,
     });
@@ -52,8 +52,8 @@ const createCommand = defineCommand({
 const listCommand = defineCommand({
   meta: { name: "list", description: "List all workspaces" },
   async run() {
-    const bract = await createCliBract();
-    const workspaces = await bract.workspaces.list();
+    const treefork = await createCliTreefork();
+    const workspaces = await treefork.workspaces.list();
     const rows = workspaces.map((workspace) => [
       workspace.name,
       workspace.branch,
@@ -71,8 +71,8 @@ const resolveCommand = defineCommand({
     name: { type: "positional", description: "Workspace name", required: true },
   },
   async run({ args }) {
-    const bract = await createCliBract();
-    const workspace = await bract.workspaces.resolve({ name: args.name });
+    const treefork = await createCliTreefork();
+    const workspace = await treefork.workspaces.resolve({ name: args.name });
 
     if (workspace === null) {
       throw new WorkspaceNotFoundError(`Workspace "${args.name}" was not found.`);
@@ -89,9 +89,9 @@ const removeCommand = defineCommand({
     force: { type: "boolean", description: "Force removal even with uncommitted changes" },
   },
   async run({ args }) {
-    const bract = await createCliBract();
+    const treefork = await createCliTreefork();
 
-    await bract.workspaces.remove({
+    await treefork.workspaces.remove({
       name: args.name,
       force: args.force,
     });
@@ -107,8 +107,8 @@ const checkpointCreateCommand = defineCommand({
     name: { type: "positional", description: "Checkpoint name", required: true },
   },
   async run({ args }) {
-    const bract = await createCliBract();
-    const checkpoint = await bract.checkpoints.create({
+    const treefork = await createCliTreefork();
+    const checkpoint = await treefork.checkpoints.create({
       workspace: args.workspace,
       name: args.name,
     });
@@ -123,8 +123,8 @@ const checkpointListCommand = defineCommand({
     workspace: { type: "positional", description: "Workspace name", required: true },
   },
   async run({ args }) {
-    const bract = await createCliBract();
-    const checkpoints = await bract.checkpoints.list({ workspace: args.workspace });
+    const treefork = await createCliTreefork();
+    const checkpoints = await treefork.checkpoints.list({ workspace: args.workspace });
     const rows = checkpoints.map((checkpoint) => [checkpoint.name, checkpoint.commit]);
 
     console.log(formatTable(["NAME", "COMMIT"], rows));
@@ -139,9 +139,9 @@ const checkpointRestoreCommand = defineCommand({
     clean: { type: "boolean", description: "Clean untracked files after restore" },
   },
   async run({ args }) {
-    const bract = await createCliBract();
+    const treefork = await createCliTreefork();
 
-    await bract.checkpoints.restore({
+    await treefork.checkpoints.restore({
       workspace: args.workspace,
       name: args.name,
       clean: args.clean,
@@ -161,7 +161,7 @@ const checkpointCommand = defineCommand({
 });
 
 const main = defineCommand({
-  meta: { name: "bract", description: "AI agent workspace isolation using git worktrees" },
+  meta: { name: "treefork", description: "AI agent workspace isolation using git worktrees" },
   subCommands: {
     create: createCommand,
     list: listCommand,

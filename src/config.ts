@@ -2,11 +2,11 @@ import { access, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { BractError } from "./errors";
-import type { BractConfig } from "./types";
+import { TreeforkError } from "./errors";
+import type { TreeforkConfig } from "./types";
 
-const LOCAL_CONFIG_NAME = "bract.config.json";
-const GLOBAL_CONFIG_PATH = join(".config", "bract", "config.json");
+const LOCAL_CONFIG_NAME = "treefork.config.json";
+const GLOBAL_CONFIG_PATH = join(".config", "treefork", "config.json");
 const CONFIG_KEYS = [
   "repo",
   "storageDir",
@@ -16,7 +16,7 @@ const CONFIG_KEYS = [
 ] as const;
 
 type ConfigKey = (typeof CONFIG_KEYS)[number];
-type LoadedConfig = Pick<BractConfig, ConfigKey>;
+type LoadedConfig = Pick<TreeforkConfig, ConfigKey>;
 
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -57,13 +57,13 @@ function parseConfigFile(contents: string, filePath: string): LoadedConfig {
   try {
     parsed = JSON.parse(contents);
   } catch (error) {
-    throw new BractError(`Config file "${filePath}" contains invalid JSON.`, {
+    throw new TreeforkError(`Config file "${filePath}" contains invalid JSON.`, {
       cause: error,
     });
   }
 
   if (!isRecord(parsed)) {
-    throw new BractError(`Config file "${filePath}" must contain a JSON object.`);
+    throw new TreeforkError(`Config file "${filePath}" must contain a JSON object.`);
   }
 
   const config: LoadedConfig = {};
@@ -76,7 +76,7 @@ function parseConfigFile(contents: string, filePath: string): LoadedConfig {
     }
 
     if (typeof value !== "string") {
-      throw new BractError(`Config value "${key}" in "${filePath}" must be a string.`);
+      throw new TreeforkError(`Config value "${key}" in "${filePath}" must be a string.`);
     }
 
     config[key] = value;

@@ -1,13 +1,13 @@
 import { mkdir } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 import { createCheckpoint, listCheckpoints, restoreCheckpoint } from "./checkpoints";
-import { BractError, BractGitError } from "./errors";
+import { TreeforkError, TreeforkGitError } from "./errors";
 import { git } from "./git";
 import { ensureMirror, mirrorPath } from "./mirror";
 import { defaultStorageDir } from "./naming";
 import type {
-  Bract,
-  BractConfig,
+  Treefork,
+  TreeforkConfig,
   CheckpointMethods,
   ResolvedConfig,
   WorkspaceMethods,
@@ -15,15 +15,15 @@ import type {
 import { createWorkspace, listWorkspaces, removeWorkspace, resolveWorkspace } from "./workspaces";
 
 const DEFAULT_BASE_REF = "HEAD";
-const DEFAULT_BRANCH_PREFIX = "bract/";
-const DEFAULT_CHECKPOINT_REF_PREFIX = "refs/bract/checkpoints";
+const DEFAULT_BRANCH_PREFIX = "treefork/";
+const DEFAULT_CHECKPOINT_REF_PREFIX = "refs/treefork/checkpoints";
 
 async function resolveRepoRoot(cwd: string): Promise<string> {
   try {
     return await git(cwd, ["rev-parse", "--show-toplevel"]);
   } catch (error) {
-    if (error instanceof BractGitError) {
-      throw new BractError(`Directory "${cwd}" is not inside a git repository.`, {
+    if (error instanceof TreeforkGitError) {
+      throw new TreeforkError(`Directory "${cwd}" is not inside a git repository.`, {
         cause: error,
       });
     }
@@ -32,7 +32,7 @@ async function resolveRepoRoot(cwd: string): Promise<string> {
   }
 }
 
-function resolveLocalConfig(options: BractConfig | undefined, repoRoot: string): ResolvedConfig {
+function resolveLocalConfig(options: TreeforkConfig | undefined, repoRoot: string): ResolvedConfig {
   const cwd = options?.cwd ?? process.cwd();
 
   return {
@@ -47,9 +47,9 @@ function resolveLocalConfig(options: BractConfig | undefined, repoRoot: string):
   };
 }
 
-async function resolveRemoteConfig(options: BractConfig): Promise<ResolvedConfig> {
+async function resolveRemoteConfig(options: TreeforkConfig): Promise<ResolvedConfig> {
   const cwd = options.cwd ?? process.cwd();
-  const storageDir = resolvePath(cwd, options.storageDir ?? ".bract");
+  const storageDir = resolvePath(cwd, options.storageDir ?? ".treefork");
   const mirror = mirrorPath(storageDir, options.repo!);
 
   await mkdir(storageDir, { recursive: true });
@@ -88,7 +88,7 @@ function createCheckpointMethods(config: ResolvedConfig): CheckpointMethods {
   };
 }
 
-export async function createBract(options: BractConfig = {}): Promise<Bract> {
+export async function createTreefork(options: TreeforkConfig = {}): Promise<Treefork> {
   const config = options.repo
     ? await resolveRemoteConfig(options)
     : resolveLocalConfig(options, await resolveRepoRoot(options.cwd ?? process.cwd()));

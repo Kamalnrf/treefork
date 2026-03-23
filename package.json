@@ -1,13 +1,13 @@
 {
-  "name": "bract",
+  "name": "treefork",
   "version": "0.0.1",
   "description": "AI agent workspace isolation using git worktrees",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kamalnrf/bract.git"
+    "url": "https://github.com/Kamalnrf/treefork.git"
   },
   "bin": {
-    "bract": "./dist/cli.js"
+    "treefork": "./dist/cli.js"
   },
   "files": [
     "dist"

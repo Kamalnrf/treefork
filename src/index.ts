@@ -1,9 +1,9 @@
-export { createBract } from "./create-bract";
+export { createTreefork } from "./create-treefork";
 export {
   CheckpointExistsError,
   CheckpointNotFoundError,
-  BractError,
-  BractGitError,
+  TreeforkError,
+  TreeforkGitError,
   InvalidNameError,
   WorkspaceExistsError,
   WorkspaceNotFoundError,
@@ -11,8 +11,8 @@ export {
 export type {
   CheckpointInfo,
   CheckpointMethods,
-  Bract,
-  BractConfig,
+  Treefork,
+  TreeforkConfig,
   CreateCheckpointOptions,
   CreateWorkspaceOptions,
   ListCheckpointsOptions,

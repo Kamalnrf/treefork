@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import { BractGitError } from "./errors";
+import { TreeforkGitError } from "./errors";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,7 +33,7 @@ export async function git(cwd: string, args: readonly string[]): Promise<string>
   } catch (error) {
     const failure = error as ExecFileFailure;
 
-    throw new BractGitError({
+    throw new TreeforkGitError({
       stderr: toText(failure.stderr).trim(),
       exitCode: toExitCode(failure.code),
       command: ["git", ...args],

@@ -4,13 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { git } from "./git";
-import { createBract } from "./index";
-import type { Bract, WorkspaceInfo } from "./types";
+import { createTreefork } from "./index";
+import type { Treefork, WorkspaceInfo } from "./types";
 
 type TestRemoteRepo = {
   originDir: string;
   storageDir: string;
-  bract: Bract;
+  treefork: Treefork;
 };
 
 async function pathExists(path: string): Promise<boolean> {
@@ -27,22 +27,22 @@ function sortWorkspaces(workspaces: WorkspaceInfo[]): WorkspaceInfo[] {
 }
 
 async function createTestRemoteRepo(): Promise<TestRemoteRepo> {
-  const originDir = await mkdtemp(join(tmpdir(), "bract-origin-"));
-  const storageDir = await mkdtemp(join(tmpdir(), "bract-remote-storage-"));
+  const originDir = await mkdtemp(join(tmpdir(), "treefork-origin-"));
+  const storageDir = await mkdtemp(join(tmpdir(), "treefork-remote-storage-"));
 
   await git(originDir, ["init"]);
-  await git(originDir, ["config", "user.name", "Bract Tests"]);
-  await git(originDir, ["config", "user.email", "bract@example.com"]);
+  await git(originDir, ["config", "user.name", "Treefork Tests"]);
+  await git(originDir, ["config", "user.email", "treefork@example.com"]);
   await writeFile(join(originDir, "README.md"), "# Remote\n");
   await git(originDir, ["add", "README.md"]);
   await git(originDir, ["commit", "-m", "Initial commit"]);
 
-  const bract = await createBract({
+  const treefork = await createTreefork({
     repo: originDir,
     storageDir,
   });
 
-  return { originDir, storageDir, bract };
+  return { originDir, storageDir, treefork };
 }
 
 async function cleanupTestRemoteRepo(repo: TestRemoteRepo): Promise<void> {
@@ -56,10 +56,10 @@ describe("remote repo workspace lifecycle", () => {
 
     try {
       const head = await git(repo.originDir, ["rev-parse", "HEAD"]);
-      const workspace = await repo.bract.workspaces.create({ name: "agent" });
+      const workspace = await repo.treefork.workspaces.create({ name: "agent" });
 
       expect(workspace.name).toBe("agent");
-      expect(workspace.branch).toBe("bract/agent");
+      expect(workspace.branch).toBe("treefork/agent");
       expect(workspace.head).toBe(head);
       expect(await pathExists(workspace.path)).toBe(true);
 
@@ -74,12 +74,12 @@ describe("remote repo workspace lifecycle", () => {
     const repo = await createTestRemoteRepo();
 
     try {
-      expect(await repo.bract.workspaces.list()).toEqual([]);
+      expect(await repo.treefork.workspaces.list()).toEqual([]);
 
-      const alpha = await repo.bract.workspaces.create({ name: "alpha" });
-      const beta = await repo.bract.workspaces.create({ name: "beta" });
+      const alpha = await repo.treefork.workspaces.create({ name: "alpha" });
+      const beta = await repo.treefork.workspaces.create({ name: "beta" });
 
-      expect(sortWorkspaces(await repo.bract.workspaces.list())).toEqual(
+      expect(sortWorkspaces(await repo.treefork.workspaces.list())).toEqual(
         sortWorkspaces([alpha, beta]),
       );
     } finally {
@@ -91,14 +91,14 @@ describe("remote repo workspace lifecycle", () => {
     const repo = await createTestRemoteRepo();
 
     try {
-      const workspace = await repo.bract.workspaces.create({ name: "agent" });
+      const workspace = await repo.treefork.workspaces.create({ name: "agent" });
 
-      await expect(repo.bract.workspaces.resolve({ name: "agent" })).resolves.toEqual(workspace);
+      await expect(repo.treefork.workspaces.resolve({ name: "agent" })).resolves.toEqual(workspace);
 
-      await repo.bract.workspaces.remove({ name: "agent" });
+      await repo.treefork.workspaces.remove({ name: "agent" });
 
       expect(await pathExists(workspace.path)).toBe(false);
-      expect(await repo.bract.workspaces.resolve({ name: "agent" })).toBeNull();
+      expect(await repo.treefork.workspaces.resolve({ name: "agent" })).toBeNull();
     } finally {
       await cleanupTestRemoteRepo(repo);
     }
@@ -108,19 +108,19 @@ describe("remote repo workspace lifecycle", () => {
     const repo = await createTestRemoteRepo();
 
     try {
-      const workspace = await repo.bract.workspaces.create({ name: "agent" });
+      const workspace = await repo.treefork.workspaces.create({ name: "agent" });
 
       await writeFile(join(workspace.path, "file.txt"), "v1\n");
       await git(workspace.path, ["add", "file.txt"]);
       await git(workspace.path, ["commit", "-m", "Add file"]);
 
-      await repo.bract.checkpoints.create({ workspace: "agent", name: "snap" });
+      await repo.treefork.checkpoints.create({ workspace: "agent", name: "snap" });
 
       await writeFile(join(workspace.path, "file.txt"), "v2\n");
       await git(workspace.path, ["add", "file.txt"]);
       await git(workspace.path, ["commit", "-m", "Update file"]);
 
-      await repo.bract.checkpoints.restore({
+      await repo.treefork.checkpoints.restore({
         workspace: "agent",
         name: "snap",
       });
@@ -136,7 +136,7 @@ describe("remote repo workspace lifecycle", () => {
     const repo = await createTestRemoteRepo();
 
     try {
-      expect(repo.bract.config.mode).toBe("remote");
+      expect(repo.treefork.config.mode).toBe("remote");
     } finally {
       await cleanupTestRemoteRepo(repo);
     }

@@ -1,4 +1,4 @@
-export type BractConfig = {
+export type TreeforkConfig = {
   cwd?: string;
   repo?: string;
   storageDir?: string;
@@ -7,7 +7,7 @@ export type BractConfig = {
   checkpointRefPrefix?: string;
 };
 
-export type ResolvedConfig = Required<Omit<BractConfig, "repo">> & {
+export type ResolvedConfig = Required<Omit<TreeforkConfig, "repo">> & {
   mode: "local" | "remote";
   repoRoot: string;
   gitDir: string;
@@ -69,7 +69,7 @@ export type CheckpointMethods = {
   restore: (options: RestoreCheckpointOptions) => Promise<void>;
 };
 
-export type Bract = {
+export type Treefork = {
   config: ResolvedConfig;
   workspaces: WorkspaceMethods;
   checkpoints: CheckpointMethods;

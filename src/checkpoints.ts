@@ -1,7 +1,7 @@
 import {
   CheckpointExistsError,
   CheckpointNotFoundError,
-  BractGitError,
+  TreeforkGitError,
   WorkspaceNotFoundError,
 } from "./errors";
 import { git, gitDir as gitWithDir } from "./git";
@@ -68,7 +68,7 @@ async function checkpointExists(config: ResolvedConfig, ref: string): Promise<bo
     await repoGit(config, ["rev-parse", "--verify", "--quiet", ref]);
     return true;
   } catch (error) {
-    if (error instanceof BractGitError && (error.exitCode === 1 || error.exitCode === 128)) {
+    if (error instanceof TreeforkGitError && (error.exitCode === 1 || error.exitCode === 128)) {
       return false;
     }
 

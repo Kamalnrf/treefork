@@ -1,18 +1,39 @@
 {
-  "name": "todo",
-  "bin": {
-    "copse": "src/cli.ts"
-  },
-  "scripts": {
-    "cli": "bun run src/cli.ts"
-  },
-  "module": "index.ts",
+  "name": "copse",
+  "version": "0.0.1",
+  "description": "AI agent workspace isolation using git worktrees",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "copse": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "cli": "bun run src/cli.ts",
+    "build": "bun run build:js && bun run build:types",
+    "build:js": "bun build ./index.ts ./src/cli.ts --outdir ./dist --target node --format esm --splitting",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "prepublishOnly": "bun run build"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kamalnrf/copse.git"
   },
   "dependencies": {
     "citty": "^0.2.1"

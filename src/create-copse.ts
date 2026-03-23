@@ -1,5 +1,9 @@
+import { mkdir } from "node:fs/promises";
+import { resolve as resolvePath } from "node:path";
+
 import { CopseError, CopseGitError } from "./errors";
 import { git } from "./git";
+import { ensureMirror, mirrorPath } from "./mirror";
 import { defaultStorageDir } from "./naming";
 import type { CheckpointMethods, Copse, CopseConfig, ResolvedConfig, WorkspaceMethods } from "./types";
 import { createCheckpoint, listCheckpoints, restoreCheckpoint } from "./checkpoints";
@@ -23,17 +27,40 @@ async function resolveRepoRoot(cwd: string): Promise<string> {
   }
 }
 
-function resolveConfig(options: CopseConfig | undefined, repoRoot: string): ResolvedConfig {
+function resolveLocalConfig(options: CopseConfig | undefined, repoRoot: string): ResolvedConfig {
   const cwd = options?.cwd ?? process.cwd();
 
   return {
+    mode: "local",
     cwd,
     repoRoot,
+    gitDir: repoRoot,
     storageDir: options?.storageDir ?? defaultStorageDir(repoRoot),
     defaultBaseRef: options?.defaultBaseRef ?? DEFAULT_BASE_REF,
     branchPrefix: options?.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
     checkpointRefPrefix:
       options?.checkpointRefPrefix ?? DEFAULT_CHECKPOINT_REF_PREFIX,
+  };
+}
+
+async function resolveRemoteConfig(options: CopseConfig): Promise<ResolvedConfig> {
+  const cwd = options.cwd ?? process.cwd();
+  const storageDir = resolvePath(cwd, options.storageDir ?? ".copse");
+  const mirror = mirrorPath(storageDir, options.repo!);
+
+  await mkdir(storageDir, { recursive: true });
+  await ensureMirror(options.repo!, mirror, cwd);
+
+  return {
+    mode: "remote",
+    cwd,
+    repoRoot: storageDir,
+    gitDir: mirror,
+    storageDir,
+    defaultBaseRef: options.defaultBaseRef ?? DEFAULT_BASE_REF,
+    branchPrefix: options.branchPrefix ?? DEFAULT_BRANCH_PREFIX,
+    checkpointRefPrefix:
+      options.checkpointRefPrefix ?? DEFAULT_CHECKPOINT_REF_PREFIX,
   };
 }
 
@@ -59,9 +86,9 @@ function createCheckpointMethods(config: ResolvedConfig): CheckpointMethods {
 }
 
 export async function createCopse(options: CopseConfig = {}): Promise<Copse> {
-  const cwd = options.cwd ?? process.cwd();
-  const repoRoot = await resolveRepoRoot(cwd);
-  const config = resolveConfig(options, repoRoot);
+  const config = options.repo
+    ? await resolveRemoteConfig(options)
+    : resolveLocalConfig(options, await resolveRepoRoot(options.cwd ?? process.cwd()));
 
   return {
     config,

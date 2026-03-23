@@ -14,6 +14,7 @@ async function createCliCopse(configOverrides: Omit<CopseConfig, "cwd"> = {}) {
     cwd,
     ...fileConfig,
     ...configOverrides,
+    repo: configOverrides.repo ?? fileConfig.repo,
   });
 }
 
@@ -40,9 +41,10 @@ const createCommand = defineCommand({
   args: {
     name: { type: "positional", description: "Workspace name", required: true },
     base: { type: "string", description: "Base ref to create workspace from" },
+    repo: { type: "string", description: "Remote git URL to clone from" },
   },
   async run({ args }) {
-    const copse = await createCliCopse();
+    const copse = await createCliCopse({ repo: args.repo });
     const workspace = await copse.workspaces.create({
       name: args.name,
       baseRef: args.base,

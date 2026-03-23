@@ -8,6 +8,7 @@ import type { CopseConfig } from "./types";
 const LOCAL_CONFIG_NAME = "copse.config.json";
 const GLOBAL_CONFIG_PATH = join(".config", "copse", "config.json");
 const CONFIG_KEYS = [
+  "repo",
   "storageDir",
   "defaultBaseRef",
   "branchPrefix",

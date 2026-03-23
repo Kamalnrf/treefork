@@ -1,13 +1,16 @@
 export type CopseConfig = {
   cwd?: string;
+  repo?: string;
   storageDir?: string;
   defaultBaseRef?: string;
   branchPrefix?: string;
   checkpointRefPrefix?: string;
 };
 
-export type ResolvedConfig = Required<CopseConfig> & {
+export type ResolvedConfig = Required<Omit<CopseConfig, "repo">> & {
+  mode: "local" | "remote";
   repoRoot: string;
+  gitDir: string;
 };
 
 export type WorkspaceInfo = {

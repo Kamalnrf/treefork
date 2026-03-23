@@ -2,7 +2,7 @@
 
 Workspace isolation for AI agents using git worktrees. Give each agent its own branch and directory — no conflicts, no coordination overhead.
 
-Copse is a small TypeScript library and CLI. It wraps `git worktree` with a clean API for creating, listing, snapshotting, and removing isolated workspaces.
+Copse is a small TypeScript library and CLI. It wraps `git worktree` with a clean API for creating, listing, snapshotting, and removing isolated workspaces. Works with local repos and remote git URLs.
 
 ## Install
 
@@ -18,6 +18,9 @@ copse create my-feature
 
 # Create from a specific ref
 copse create my-feature --base main
+
+# Create from a remote git URL
+copse create my-feature --repo git@github.com:acme/service.git
 
 # List all workspaces
 copse list
@@ -53,7 +56,13 @@ copse checkpoint restore my-feature before-refactor --clean
 ```typescript
 import { createCopse } from "copse";
 
+// From a local repo
 const copse = await createCopse();
+
+// From a remote git URL
+const remote = await createCopse({
+  repo: "git@github.com:acme/service.git",
+});
 ```
 
 ### Workspaces
@@ -119,7 +128,9 @@ Or use a `copse.config.json` file (searched upward from cwd, then `~/.config/cop
 
 ## How it works
 
-Each workspace is a git worktree stored in a sibling directory (`../.{repoName}-copse/`). Branches are namespaced under `copse/` and checkpoints are stored as git refs under `refs/copse/checkpoints/`. Nothing leaves your local repo.
+**Local mode** — each workspace is a git worktree stored in a sibling directory (`../.{repoName}-copse/`). Branches are namespaced under `copse/` and checkpoints are stored as git refs under `refs/copse/checkpoints/`.
+
+**Remote mode** — when `repo` is set, copse creates a bare clone of the remote URL under the storage directory (`.copse/.mirrors/`), then creates worktrees from it. The bare clone is fetched on initialization to stay current. Branches and checkpoint refs live in the bare clone, not on the remote.
 
 ## Alternatives
 

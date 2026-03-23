@@ -4,7 +4,7 @@ import {
   CopseGitError,
   WorkspaceNotFoundError,
 } from "./errors";
-import { git } from "./git";
+import { git, gitDir as gitWithDir } from "./git";
 import { sanitizeName } from "./naming";
 import type {
   CheckpointInfo,
@@ -18,6 +18,14 @@ import { resolveWorkspace } from "./workspaces";
 const HEAD_REF = "HEAD";
 const CLEAN_WORKTREE_ARGS = ["clean", "-fd"] as const;
 const RESET_HARD_ARGS = ["reset", "--hard"] as const;
+
+function repoGit(config: ResolvedConfig, args: readonly string[]): Promise<string> {
+  if (config.mode === "remote") {
+    return gitWithDir(config.gitDir, config.cwd, args);
+  }
+
+  return git(config.repoRoot, args);
+}
 
 function checkpointRefPrefix(config: ResolvedConfig): string {
   return config.checkpointRefPrefix.replace(/\/+$/, "");
@@ -69,7 +77,7 @@ async function checkpointExists(
   ref: string,
 ): Promise<boolean> {
   try {
-    await git(config.repoRoot, ["rev-parse", "--verify", "--quiet", ref]);
+    await repoGit(config, ["rev-parse", "--verify", "--quiet", ref]);
     return true;
   } catch (error) {
     if (
@@ -140,7 +148,7 @@ export async function createCheckpoint(
   }
 
   const commit = await git(workspace.path, ["rev-parse", HEAD_REF]);
-  await git(config.repoRoot, ["update-ref", ref, commit]);
+  await repoGit(config, ["update-ref", ref, commit]);
 
   return {
     workspace: workspace.name,
@@ -156,7 +164,7 @@ export async function listCheckpoints(
 ): Promise<CheckpointInfo[]> {
   const workspaceName = await getWorkspaceName(config, options.workspace);
   const namespace = checkpointRefNamespace(config, workspaceName);
-  const output = await git(config.repoRoot, [
+  const output = await repoGit(config, [
     "for-each-ref",
     namespace,
     "--format=%(refname) %(objectname)",

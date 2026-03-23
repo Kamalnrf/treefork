@@ -7,7 +7,7 @@ import {
   WorkspaceExistsError,
   WorkspaceNotFoundError,
 } from "./errors";
-import { git } from "./git";
+import { git, gitDir as gitWithDir } from "./git";
 import { nameFromBranch, sanitizeName, toBranchName, toWorkspacePath } from "./naming";
 import type {
   CreateWorkspaceOptions,
@@ -27,6 +27,14 @@ type ParsedWorktree = {
   head: string | null;
   branch: string | null;
 };
+
+function repoGit(config: ResolvedConfig, args: readonly string[]): Promise<string> {
+  if (config.mode === "remote") {
+    return gitWithDir(config.gitDir, config.cwd, args);
+  }
+
+  return git(config.repoRoot, args);
+}
 
 function absoluteStorageDir(config: ResolvedConfig): string {
   return resolvePath(config.repoRoot, config.storageDir);
@@ -129,7 +137,7 @@ async function deleteCheckpointRefs(
   workspaceName: string,
 ): Promise<void> {
   const refNamespace = checkpointRefNamespace(config, workspaceName);
-  const output = await git(config.repoRoot, [
+  const output = await repoGit(config, [
     "for-each-ref",
     refNamespace,
     "--format=%(refname)",
@@ -140,7 +148,7 @@ async function deleteCheckpointRefs(
       continue;
     }
 
-    await git(config.repoRoot, ["update-ref", "-d", ref]);
+    await repoGit(config, ["update-ref", "-d", ref]);
   }
 }
 
@@ -150,7 +158,7 @@ async function deleteWorkspaceBranch(
   force: boolean,
 ): Promise<void> {
   try {
-    await git(config.repoRoot, ["branch", "-D", branch]);
+    await repoGit(config, ["branch", "-D", branch]);
   } catch (error) {
     if (force && isMissingBranchError(error)) {
       return;
@@ -174,7 +182,7 @@ export async function createWorkspace(
   }
 
   await mkdir(absoluteStorageDir(config), { recursive: true });
-  await git(config.repoRoot, ["worktree", "add", "-b", branch, path, baseRef]);
+  await repoGit(config, ["worktree", "add", "-b", branch, path, baseRef]);
 
   const head = await git(path, ["rev-parse", HEAD_REF]);
   const canonicalPath = await realpath(path);
@@ -192,7 +200,7 @@ export async function resolveWorkspace(
   options: ResolveWorkspaceOptions,
 ): Promise<WorkspaceInfo | null> {
   const targetBranch = toBranchName(options.name, config.branchPrefix);
-  const output = await git(config.repoRoot, ["worktree", "list", "--porcelain"]);
+  const output = await repoGit(config, ["worktree", "list", "--porcelain"]);
 
   for (const entry of parseWorktreeList(output)) {
     if (entry.branch !== targetBranch) {
@@ -206,7 +214,7 @@ export async function resolveWorkspace(
 }
 
 export async function listWorkspaces(config: ResolvedConfig): Promise<WorkspaceInfo[]> {
-  const output = await git(config.repoRoot, ["worktree", "list", "--porcelain"]);
+  const output = await repoGit(config, ["worktree", "list", "--porcelain"]);
   const workspaces: WorkspaceInfo[] = [];
 
   for (const entry of parseWorktreeList(output)) {
@@ -248,7 +256,7 @@ export async function removeWorkspace(
   args.push(workspace.path);
 
   try {
-    await git(config.repoRoot, args);
+    await repoGit(config, args);
   } catch (error) {
     if (!force && isDirtyWorktreeError(error)) {
       throw new CopseError(

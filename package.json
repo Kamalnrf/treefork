@@ -3,6 +3,9 @@
   "bin": {
     "copse": "src/cli.ts"
   },
+  "scripts": {
+    "cli": "bun run src/cli.ts"
+  },
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
@@ -10,5 +13,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "citty": "^0.2.1"
   }
 }

@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 import { defineCommand, runMain } from "citty";
+import pc from "picocolors";
 
 import { loadConfig } from "./config";
 import { WorkspaceNotFoundError, createTreefork } from "./index";
 import type { TreeforkConfig } from "./types";
+
+const HUMAN_OUTPUT = process.stdout.isTTY === true;
 
 async function createCliTreefork(configOverrides: Omit<TreeforkConfig, "cwd"> = {}) {
   const cwd = process.cwd();
@@ -18,17 +21,91 @@ async function createCliTreefork(configOverrides: Omit<TreeforkConfig, "cwd"> = 
   });
 }
 
-function formatTable(headers: readonly string[], rows: readonly string[][]): string {
-  const widths = headers.map((header, columnIndex) =>
-    rows.reduce((width, row) => Math.max(width, row[columnIndex]?.length ?? 0), header.length),
+type Detail = {
+  label: string;
+  value: string;
+  tone?: "default" | "accent" | "muted";
+};
+
+type StackedRecord = {
+  title: string;
+  details: readonly Detail[];
+  tone?: "default" | "accent" | "success";
+};
+
+function colorTitle(value: string, tone: StackedRecord["tone"] = "default"): string {
+  if (!HUMAN_OUTPUT) {
+    return value;
+  }
+
+  if (tone === "success") {
+    return pc.bold(pc.green(value));
+  }
+
+  if (tone === "accent") {
+    return pc.bold(pc.cyan(value));
+  }
+
+  return pc.bold(value);
+}
+
+function colorLabel(value: string): string {
+  return HUMAN_OUTPUT ? pc.dim(value) : value;
+}
+
+function colorValue(value: string, tone: Detail["tone"] = "default"): string {
+  if (!HUMAN_OUTPUT) {
+    return value;
+  }
+
+  if (tone === "accent") {
+    return pc.cyan(value);
+  }
+
+  if (tone === "muted") {
+    return pc.dim(value);
+  }
+
+  return value;
+}
+
+function formatStackedRecords(records: readonly StackedRecord[]): string {
+  if (records.length === 0) {
+    return "";
+  }
+
+  const labelWidth = records.reduce(
+    (width, record) =>
+      record.details.reduce((detailWidth, detail) => Math.max(detailWidth, detail.label.length), width),
+    0,
   );
 
-  const formatRow = (row: readonly string[]) =>
-    row.map((value, columnIndex) => value.padEnd(widths[columnIndex] ?? value.length)).join("  ");
+  return records
+    .map((record) => {
+      const lines = [colorTitle(record.title, record.tone)];
 
-  const separator = widths.map((width) => "-".repeat(width));
+      for (const detail of record.details) {
+        const label = colorLabel(detail.label.padEnd(labelWidth));
+        const value = colorValue(detail.value, detail.tone);
 
-  return [formatRow(headers), formatRow(separator), ...rows.map(formatRow)].join("\n");
+        lines.push(`  ${label}  ${value}`);
+      }
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+function printOutput(output: string): void {
+  if (output !== "") {
+    console.log(output);
+  }
+}
+
+function printEmptyState(message: string): void {
+  if (HUMAN_OUTPUT) {
+    console.log(pc.dim(message));
+  }
 }
 
 const createCommand = defineCommand({
@@ -45,7 +122,25 @@ const createCommand = defineCommand({
       baseRef: args.base,
     });
 
-    console.log(workspace.path);
+    if (!HUMAN_OUTPUT) {
+      console.log(workspace.path);
+      return;
+    }
+
+    printOutput(
+      formatStackedRecords([
+        {
+          title: `Created workspace ${workspace.name}`,
+          tone: "success",
+          details: [
+            { label: "branch", value: workspace.branch, tone: "accent" },
+            { label: "path", value: workspace.path },
+            { label: "head", value: workspace.head, tone: "accent" },
+            { label: "next", value: `cd ${workspace.path}`, tone: "muted" },
+          ],
+        },
+      ]),
+    );
   },
 });
 
@@ -54,14 +149,24 @@ const listCommand = defineCommand({
   async run() {
     const treefork = await createCliTreefork();
     const workspaces = await treefork.workspaces.list();
-    const rows = workspaces.map((workspace) => [
-      workspace.name,
-      workspace.branch,
-      workspace.path,
-      workspace.head,
-    ]);
+    const output = formatStackedRecords(
+      workspaces.map((workspace) => ({
+        title: workspace.name,
+        tone: "accent",
+        details: [
+          { label: "branch", value: workspace.branch, tone: "accent" },
+          { label: "path", value: workspace.path },
+          { label: "head", value: workspace.head, tone: "muted" },
+        ],
+      })),
+    );
 
-    console.log(formatTable(["NAME", "BRANCH", "PATH", "HEAD"], rows));
+    if (output === "") {
+      printEmptyState("No workspaces found.");
+      return;
+    }
+
+    printOutput(output);
   },
 });
 
@@ -78,7 +183,24 @@ const resolveCommand = defineCommand({
       throw new WorkspaceNotFoundError(`Workspace "${args.name}" was not found.`);
     }
 
-    console.log(workspace.path);
+    if (!HUMAN_OUTPUT) {
+      console.log(workspace.path);
+      return;
+    }
+
+    printOutput(
+      formatStackedRecords([
+        {
+          title: `Resolved workspace ${workspace.name}`,
+          tone: "accent",
+          details: [
+            { label: "branch", value: workspace.branch, tone: "accent" },
+            { label: "path", value: workspace.path },
+            { label: "head", value: workspace.head, tone: "muted" },
+          ],
+        },
+      ]),
+    );
   },
 });
 
@@ -96,7 +218,15 @@ const removeCommand = defineCommand({
       force: args.force,
     });
 
-    console.log(`Removed workspace "${args.name}".`);
+    printOutput(
+      formatStackedRecords([
+        {
+          title: `Removed workspace ${args.name}`,
+          tone: "success",
+          details: args.force ? [{ label: "force", value: "true", tone: "muted" }] : [],
+        },
+      ]),
+    );
   },
 });
 
@@ -113,7 +243,24 @@ const checkpointCreateCommand = defineCommand({
       name: args.name,
     });
 
-    console.log(checkpoint.ref);
+    if (!HUMAN_OUTPUT) {
+      console.log(checkpoint.ref);
+      return;
+    }
+
+    printOutput(
+      formatStackedRecords([
+        {
+          title: `Created checkpoint ${checkpoint.name}`,
+          tone: "success",
+          details: [
+            { label: "workspace", value: checkpoint.workspace, tone: "accent" },
+            { label: "ref", value: checkpoint.ref },
+            { label: "commit", value: checkpoint.commit, tone: "muted" },
+          ],
+        },
+      ]),
+    );
   },
 });
 
@@ -125,9 +272,23 @@ const checkpointListCommand = defineCommand({
   async run({ args }) {
     const treefork = await createCliTreefork();
     const checkpoints = await treefork.checkpoints.list({ workspace: args.workspace });
-    const rows = checkpoints.map((checkpoint) => [checkpoint.name, checkpoint.commit]);
+    const output = formatStackedRecords(
+      checkpoints.map((checkpoint) => ({
+        title: checkpoint.name,
+        tone: "accent",
+        details: [
+          { label: "workspace", value: checkpoint.workspace, tone: "accent" },
+          { label: "commit", value: checkpoint.commit, tone: "muted" },
+        ],
+      })),
+    );
 
-    console.log(formatTable(["NAME", "COMMIT"], rows));
+    if (output === "") {
+      printEmptyState(`No checkpoints found for workspace "${args.workspace}".`);
+      return;
+    }
+
+    printOutput(output);
   },
 });
 
@@ -147,7 +308,18 @@ const checkpointRestoreCommand = defineCommand({
       clean: args.clean,
     });
 
-    console.log(`Restored checkpoint "${args.name}" for workspace "${args.workspace}".`);
+    printOutput(
+      formatStackedRecords([
+        {
+          title: `Restored checkpoint ${args.name}`,
+          tone: "success",
+          details: [
+            { label: "workspace", value: args.workspace, tone: "accent" },
+            { label: "clean", value: String(args.clean === true), tone: "muted" },
+          ],
+        },
+      ]),
+    );
   },
 });
 

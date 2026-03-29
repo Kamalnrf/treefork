@@ -1,6 +1,6 @@
 {
   "name": "treefork",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "AI agent workspace isolation using git worktrees",
   "repository": {
     "type": "git",

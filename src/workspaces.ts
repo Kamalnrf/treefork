@@ -1,7 +1,12 @@
 import { access, mkdir, realpath } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 
-import { TreeforkError, TreeforkGitError, WorkspaceExistsError, WorkspaceNotFoundError } from "./errors";
+import {
+  TreeforkError,
+  TreeforkGitError,
+  WorkspaceExistsError,
+  WorkspaceNotFoundError,
+} from "./errors";
 import { git, gitDir as gitWithDir } from "./git";
 import { nameFromBranch, sanitizeName, toBranchName, toWorkspacePath } from "./naming";
 import type {

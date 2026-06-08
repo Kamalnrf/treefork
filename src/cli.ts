@@ -5,6 +5,7 @@ import pc from "picocolors";
 
 import { loadConfig } from "./config";
 import { WorkspaceNotFoundError, createTreefork } from "./index";
+import { openWorkspaceInTmux } from "./tmux";
 import type { TreeforkConfig } from "./types";
 
 const HUMAN_OUTPUT = process.stdout.isTTY === true;
@@ -76,7 +77,10 @@ function formatStackedRecords(records: readonly StackedRecord[]): string {
 
   const labelWidth = records.reduce(
     (width, record) =>
-      record.details.reduce((detailWidth, detail) => Math.max(detailWidth, detail.label.length), width),
+      record.details.reduce(
+        (detailWidth, detail) => Math.max(detailWidth, detail.label.length),
+        width,
+      ),
     0,
   );
 
@@ -114,12 +118,29 @@ const createCommand = defineCommand({
     name: { type: "positional", description: "Workspace name", required: true },
     base: { type: "string", description: "Base ref to create workspace from" },
     repo: { type: "string", description: "Remote git URL to clone from" },
+    "tmux-window": {
+      type: "boolean",
+      description: "Open or reuse a tmux window for the workspace",
+    },
+    "tmux-session": {
+      type: "string",
+      description: "Open or reuse a tmux session for the workspace",
+    },
   },
   async run({ args }) {
     const treefork = await createCliTreefork({ repo: args.repo });
     const workspace = await treefork.workspaces.create({
       name: args.name,
       baseRef: args.base,
+    });
+    const tmuxWindow = args.tmuxWindow === true;
+    const tmuxSession = typeof args.tmuxSession === "string" ? args.tmuxSession : undefined;
+    const tmuxEnabled = tmuxWindow || tmuxSession !== undefined;
+
+    await openWorkspaceInTmux({
+      workspace,
+      window: tmuxWindow,
+      session: tmuxSession,
     });
 
     if (!HUMAN_OUTPUT) {
@@ -136,6 +157,9 @@ const createCommand = defineCommand({
             { label: "branch", value: workspace.branch, tone: "accent" },
             { label: "path", value: workspace.path },
             { label: "head", value: workspace.head, tone: "accent" },
+            ...(tmuxEnabled
+              ? [{ label: "tmux", value: tmuxSession ?? "window", tone: "accent" } as const]
+              : []),
             { label: "next", value: `cd ${workspace.path}`, tone: "muted" },
           ],
         },
@@ -343,4 +367,4 @@ const main = defineCommand({
   },
 });
 
-runMain(main);
+void runMain(main);

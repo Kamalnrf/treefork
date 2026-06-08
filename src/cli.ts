@@ -4,7 +4,12 @@ import { defineCommand, runMain } from "citty";
 import pc from "picocolors";
 
 import { loadConfig } from "./config";
-import { WorkspaceNotFoundError, createTreefork } from "./index";
+import {
+  TreeforkGitError,
+  WorkspaceExistsError,
+  WorkspaceNotFoundError,
+  createTreefork,
+} from "./index";
 import { openWorkspaceInTmux } from "./tmux";
 import type { TreeforkConfig } from "./types";
 
@@ -112,6 +117,33 @@ function printEmptyState(message: string): void {
   }
 }
 
+async function createOrReuseWorkspace(
+  treefork: Awaited<ReturnType<typeof createCliTreefork>>,
+  options: { name: string; baseRef?: string },
+) {
+  try {
+    return {
+      workspace: await treefork.workspaces.create(options),
+      created: true,
+    };
+  } catch (error) {
+    if (!(error instanceof WorkspaceExistsError) && !(error instanceof TreeforkGitError)) {
+      throw error;
+    }
+
+    const workspace = await treefork.workspaces.resolve({ name: options.name });
+
+    if (workspace === null) {
+      throw error;
+    }
+
+    return {
+      workspace,
+      created: false,
+    };
+  }
+}
+
 const createCommand = defineCommand({
   meta: { name: "create", description: "Create a new workspace" },
   args: {
@@ -129,7 +161,7 @@ const createCommand = defineCommand({
   },
   async run({ args }) {
     const treefork = await createCliTreefork({ repo: args.repo });
-    const workspace = await treefork.workspaces.create({
+    const { workspace, created } = await createOrReuseWorkspace(treefork, {
       name: args.name,
       baseRef: args.base,
     });
@@ -151,8 +183,8 @@ const createCommand = defineCommand({
     printOutput(
       formatStackedRecords([
         {
-          title: `Created workspace ${workspace.name}`,
-          tone: "success",
+          title: `${created ? "Created" : "Reused"} workspace ${workspace.name}`,
+          tone: created ? "success" : "accent",
           details: [
             { label: "branch", value: workspace.branch, tone: "accent" },
             { label: "path", value: workspace.path },

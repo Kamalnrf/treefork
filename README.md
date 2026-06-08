@@ -25,6 +25,7 @@ treefork create my-feature --repo git@github.com:acme/service.git
 # Create and open the workspace in tmux
 treefork create my-feature --tmux-window
 treefork create my-feature --tmux-session quire
+treefork create my-feature --tmux-session
 
 # List all workspaces
 treefork list
@@ -136,7 +137,7 @@ Or use a `treefork.config.json` file (searched upward from cwd, then `~/.config/
 
 **Remote mode** — when `repo` is set, treefork creates a bare clone of the remote URL under the storage directory (`.treefork/.mirrors/`), then creates worktrees from it. The bare clone is fetched on initialization to stay current. Branches and checkpoint refs live in the bare clone, not on the remote.
 
-**tmux integration** — `treefork create <name> --tmux-window` creates or reuses the workspace and opens or reuses a window named `<name>` in the current tmux session. `treefork create <name> --tmux-session <session>` creates or reuses a tmux session and opens or reuses a window named `<name>` there. Treefork operates on the current repo; callers are responsible for running it from the repo they want to fork.
+**tmux integration** — `treefork create <name> --tmux-window` creates or reuses the workspace and opens or reuses a window named `<name>` in the current tmux session. `treefork create <name> --tmux-session <session>` creates or reuses a tmux session and opens or reuses a window named `<name>` there. `treefork create <name> --tmux-session` uses `<name>` as the tmux session name. Treefork operates on the current repo; callers are responsible for running it from the repo they want to fork.
 
 ## Alternatives
 

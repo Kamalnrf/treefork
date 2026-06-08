@@ -19,6 +19,7 @@ treefork create <work-name> --tmux-window
 - `create` is CLI-idempotent: it creates the workspace if missing and reuses it if already registered.
 - `--tmux-window` opens/reuses a window named `<work-name>` in the current tmux session.
 - `--tmux-session <session>` opens/reuses a window named `<work-name>` inside the named session.
+- `--tmux-session` without a value uses `<work-name>` as the session name.
 - If treefork is unavailable, use manual `git worktree` as a fallback and preserve the same naming/cleanup discipline.
 
 Prefer work names that are short, descriptive, and unique within the repo/session, for example:
@@ -26,6 +27,7 @@ Prefer work names that are short, descriptive, and unique within the repo/sessio
 ```bash
 treefork create launch-checklist --tmux-window
 treefork create auth-review --tmux-session quire
+treefork create observability-pass --tmux-session
 ```
 
 ## Cleanup

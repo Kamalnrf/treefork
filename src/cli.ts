@@ -166,7 +166,12 @@ const createCommand = defineCommand({
       baseRef: args.base,
     });
     const tmuxWindow = args.tmuxWindow === true;
-    const tmuxSession = typeof args.tmuxSession === "string" ? args.tmuxSession : undefined;
+    const tmuxSession =
+      args.tmuxSession === true
+        ? args.name
+        : typeof args.tmuxSession === "string"
+          ? args.tmuxSession
+          : undefined;
     const tmuxEnabled = tmuxWindow || tmuxSession !== undefined;
 
     await openWorkspaceInTmux({

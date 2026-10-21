@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { homedir } from "node:os";
+import { createInterface } from "node:readline/promises";
+
 import { defineCommand, runMain } from "citty";
 import pc from "picocolors";
 
@@ -10,10 +13,34 @@ import {
   WorkspaceNotFoundError,
   createTreefork,
 } from "./index";
+import {
+  claimSetupHint,
+  installShellIntegration,
+  shellInit,
+  shellName,
+  shellProfile,
+} from "./shell";
 import { openWorkspaceInTmux } from "./tmux";
 import type { TreeforkConfig } from "./types";
 
 const HUMAN_OUTPUT = process.stdout.isTTY === true;
+
+function displayPath(path: string): string {
+  const home = homedir();
+  return path === home ? "~" : path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path;
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function cdCommand(path: string): string {
+  const displayed = displayPath(path);
+  if (/^[A-Za-z0-9_./~-]+$/.test(displayed)) return `cd ${displayed}`;
+  return displayed.startsWith("~/")
+    ? `cd ~/${shellQuote(displayed.slice(2))}`
+    : `cd ${shellQuote(path)}`;
+}
 
 async function createCliTreefork(configOverrides: Omit<TreeforkConfig, "cwd"> = {}) {
   const cwd = process.cwd();
@@ -180,28 +207,34 @@ const createCommand = defineCommand({
       session: tmuxSession,
     });
 
-    if (!HUMAN_OUTPUT) {
+    const entering = process.env.TREEFORK_ENTER === "1";
+    const summary = `${created ? "Created" : "Reused"} workspace ${pc.bold(workspace.name)}`;
+    if (!HUMAN_OUTPUT || entering) {
+      if (entering && process.stderr.isTTY) {
+        console.error(`${pc.green("✓")} ${summary}\n  ${pc.gray("branch")}  ${workspace.branch}`);
+      }
       console.log(workspace.path);
       return;
     }
 
-    printOutput(
-      formatStackedRecords([
-        {
-          title: `${created ? "Created" : "Reused"} workspace ${workspace.name}`,
-          tone: created ? "success" : "accent",
-          details: [
-            { label: "branch", value: workspace.branch, tone: "accent" },
-            { label: "path", value: workspace.path },
-            { label: "head", value: workspace.head, tone: "accent" },
-            ...(tmuxEnabled
-              ? [{ label: "tmux", value: tmuxSession ?? "window", tone: "accent" } as const]
-              : []),
-            { label: "next", value: `cd ${workspace.path}`, tone: "muted" },
-          ],
-        },
-      ]),
-    );
+    console.log(`${pc.green("✓")} ${summary}\n  ${pc.gray("branch")}  ${workspace.branch}`);
+    if (tmuxEnabled) {
+      console.log(`  ${pc.gray("path")}    ${displayPath(workspace.path)}`);
+      console.log(
+        `  ${pc.gray("tmux")}    ${tmuxSession ? `session ${tmuxSession} · ` : ""}window ${workspace.name}`,
+      );
+      if (tmuxSession) {
+        const action = process.env.TMUX ? "switch-client" : "attach";
+        console.log(`\n  ${pc.cyan(`tmux ${action} -t ${shellQuote(tmuxSession)}`)}`);
+      }
+    } else {
+      console.log(`\n  ${pc.cyan(cdCommand(workspace.path))}`);
+      if (await claimSetupHint()) {
+        console.log(
+          `\n${pc.gray("Tip: run treefork setup to create and enter workspaces with tf <name>.")}`,
+        );
+      }
+    }
   },
 });
 
@@ -216,8 +249,8 @@ const listCommand = defineCommand({
         tone: "accent",
         details: [
           { label: "branch", value: workspace.branch, tone: "accent" },
-          { label: "path", value: workspace.path },
-          { label: "head", value: workspace.head, tone: "muted" },
+          { label: "path", value: HUMAN_OUTPUT ? displayPath(workspace.path) : workspace.path },
+          ...(!HUMAN_OUTPUT ? [{ label: "head", value: workspace.head }] : []),
         ],
       })),
     );
@@ -249,19 +282,7 @@ const resolveCommand = defineCommand({
       return;
     }
 
-    printOutput(
-      formatStackedRecords([
-        {
-          title: `Resolved workspace ${workspace.name}`,
-          tone: "accent",
-          details: [
-            { label: "branch", value: workspace.branch, tone: "accent" },
-            { label: "path", value: workspace.path },
-            { label: "head", value: workspace.head, tone: "muted" },
-          ],
-        },
-      ]),
-    );
+    console.log(displayPath(workspace.path));
   },
 });
 
@@ -393,9 +414,63 @@ const checkpointCommand = defineCommand({
   },
 });
 
+const initCommand = defineCommand({
+  meta: { name: "init", description: "Print bash/zsh integration for create-and-enter with tf" },
+  args: {
+    shell: { type: "positional", description: "bash or zsh", required: true },
+  },
+  run({ args }) {
+    shellName(args.shell);
+    console.log(shellInit());
+  },
+});
+
+const setupCommand = defineCommand({
+  meta: {
+    name: "setup",
+    description: "Install the tf shell function (creates and enters a workspace)",
+  },
+  args: {
+    shell: { type: "string", description: "Shell to configure: bash or zsh (defaults to $SHELL)" },
+    yes: { type: "boolean", description: "Approve adding integration to your shell profile" },
+  },
+  async run({ args }) {
+    const shell = shellName(args.shell ?? process.env.SHELL);
+    const profile = shellProfile(shell);
+    if (!args.yes) {
+      if (!process.stdin.isTTY || !process.stderr.isTTY) {
+        throw new Error(
+          "Setup needs an interactive terminal. Use --yes to approve the profile edit.",
+        );
+      }
+      const prompt = createInterface({ input: process.stdin, output: process.stderr });
+      try {
+        const answer = await prompt.question(
+          `Add tf (create and enter a workspace) to ${displayPath(profile)}? [y/N] `,
+        );
+        if (!/^y(es)?$/i.test(answer.trim())) {
+          console.log("Setup cancelled. No files changed.");
+          return;
+        }
+      } finally {
+        prompt.close();
+      }
+    }
+    const installed = await installShellIntegration(shell, profile);
+    console.log(
+      `${installed ? "Added" : "Already configured"} shell integration in ${displayPath(profile)}.`,
+    );
+    console.log(
+      `\nTo enable tf in this terminal, run:\n\n  eval "$(treefork init ${shell})"\n\nThen use: tf <name>`,
+    );
+  },
+});
+
 const main = defineCommand({
   meta: { name: "treefork", description: "AI agent workspace isolation using git worktrees" },
   subCommands: {
+    setup: setupCommand,
+    init: initCommand,
     create: createCommand,
     list: listCommand,
     resolve: resolveCommand,

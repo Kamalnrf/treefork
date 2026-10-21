@@ -12,8 +12,33 @@ bun add treefork
 
 ## CLI
 
+### Create and enter a workspace
+
+With `treefork` on your PATH, run the one-time shell setup:
+
 ```bash
-# Create or reuse a workspace (prints its path)
+treefork setup
+```
+
+Setup supports bash and zsh. It asks before adding a marked initialization line to your shell profile, preserves existing settings, and can be run again without duplicating that line. Use `--shell bash` or `--shell zsh` to select a shell explicitly, or `--yes` to approve the edit without prompting. Zsh uses `${ZDOTDIR:-$HOME}/.zshrc`; bash uses `~/.bashrc` on Linux. On macOS, bash uses the first existing login profile (`~/.bash_profile`, `~/.bash_login`, or `~/.profile`), defaulting to `~/.bash_profile` if none exists.
+
+Follow the printed activation command for your current terminal (or open a new terminal):
+
+```bash
+eval "$(treefork init zsh)" # use bash for a bash shell
+tf my-feature
+```
+
+`tf <name>` creates or reuses a workspace and changes your current shell's directory into it. Creation errors leave your directory unchanged. Options such as `tf my-feature --base main` are forwarded to `create`; help and tmux options run the underlying command without navigating the calling shell. `tf` is a workspace-entry function, not a shorthand for all subcommands: use `treefork list`, not `tf list` (which creates a workspace named `list`). An existing `tf` alias, function, or executable is not overwritten.
+
+For manual installation, add `eval "$(treefork init bash)"` or `eval "$(treefork init zsh)"` to your shell profile. To uninstall, remove the marked `# treefork shell integration` line and open a new terminal. Setup does not change worktree storage preferences.
+
+### Explicit commands and automation
+
+`treefork create` remains available when you want to create a workspace without entering it, or when working with scripts, agents, and tmux. When stdout is captured or piped, `create` and `resolve` print only the absolute path. Interactive output shortens paths under your home directory; a one-time setup hint appears after an ordinary interactive create when integration is not loaded.
+
+```bash
+# Create or reuse a workspace without entering it
 treefork create my-feature
 
 # Create from a specific ref
